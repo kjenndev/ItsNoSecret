@@ -1,4 +1,4 @@
-# It’s No Secret - Computer Services Management Platform
+# It’s No Secret Computer Services Management Platform
 
 A professional, high-fidelity full-stack platform for managing computer service diagnostics, repairs, and customer relationships. This application consists of a public-facing landing page, a Staff Admin Portal (CRM/Ticketing), and a Client Service Portal.
 
