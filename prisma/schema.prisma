@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  TECHNICIAN
+  CLIENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketType {
+  PC_BUILD
+  PC_REPAIR
+  SYSTEM_DIAGNOSTIC
+  MALWARE_REMOVAL
+  DATA_RECOVERY
+  TRAINING
+  OTHER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  roles        Role[]   @default([ADMIN])
+  tickets      Ticket[] @relation("AssignedTickets")
+  comments     Comment[]
+  customer     Customer?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  address   String?
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id])
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ticket {
+  id           String         @id @default(uuid())
+  title        String
+  description  String
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
+  type         TicketType     @default(PC_REPAIR)
+  customerId   String
+  customer     Customer       @relation(fields: [customerId], references: [id])
+  assignedToId String?
+  assignedTo   User?          @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  comments     Comment[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

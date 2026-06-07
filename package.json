@@ -1,0 +1,63 @@
+{
+  "name": "its-no-secret-computer-services-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "vite --host 0.0.0.0",
+    "dev:server": "nodemon --exec tsx server/index.ts",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@emotion/react": "latest",
+    "@emotion/styled": "latest",
+    "@fontsource/ibm-plex-mono": "latest",
+    "@fontsource/ibm-plex-sans": "latest",
+    "@mui/icons-material": "latest",
+    "@mui/material": "latest",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@vitejs/plugin-react": "latest",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.21.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "^7.17.0",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/react": "latest",
+    "@testing-library/user-event": "latest",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.9.2",
+    "@types/pg": "^8.20.0",
+    "concurrently": "^10.0.3",
+    "eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "eslint-plugin-react-refresh": "latest",
+    "globals": "latest",
+    "jsdom": "latest",
+    "nodemon": "^3.1.14",
+    "prisma": "^7.8.0",
+    "tsx": "^4.22.4",
+    "vitest": "latest"
+  }
+}
