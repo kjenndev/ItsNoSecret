@@ -1,0 +1,58 @@
+{
+  "brand": {
+    "name": "It's No Secret Computer Services",
+    "tagline": "Finding What Others Miss.",
+    "logoConcept": "Original simplified magnifying-glass security/diagnostic mark with a navy and teal circular lens, subtle circuit traces, centered keyhole cue, and bold professional wordmark"
+  },
+  "palette": {
+    "backgroundDefault": "#050A12",
+    "backgroundPaper": "#0B1728",
+    "backgroundElevated": "#10243B",
+    "backgroundSection": "#07111F",
+    "primaryMain": "#1877F2",
+    "primaryLight": "#38D6FF",
+    "primaryDark": "#0B4EA2",
+    "secondaryMain": "#2EE6A6",
+    "secondaryLight": "#78E08F",
+    "secondaryDark": "#168A66",
+    "textPrimary": "#F8FBFF",
+    "textSecondary": "#B9C7D8",
+    "textMuted": "#6C7A8F",
+    "divider": "#20354F",
+    "warning": "#F5C451",
+    "error": "#FF5D5D"
+  },
+  "typography": {
+    "fontFamily": "IBM Plex Sans, Inter, system-ui, -apple-system, Segoe UI, sans-serif",
+    "monoFontFamily": "IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
+    "h1Desktop": {
+      "fontSize": "56-64px",
+      "fontWeight": 600,
+      "lineHeight": 1.04,
+      "letterSpacing": "-1.2px"
+    },
+    "h1Mobile": {
+      "fontSize": "38-44px",
+      "fontWeight": 600,
+      "lineHeight": 1.08
+    },
+    "body": {
+      "fontSize": "16-18px",
+      "lineHeight": 1.55
+    }
+  },
+  "shape": {
+    "controlRadius": 10,
+    "cardRadius": 16,
+    "panelRadius": 24,
+    "pillRadius": 999
+  },
+  "spacing": {
+    "base": 8,
+    "sectionDesktop": "88-112px",
+    "sectionMobile": "48-56px",
+    "cardPaddingDesktop": 24,
+    "cardPaddingMobile": 20
+  },
+  "focusRing": "0 0 0 3px rgba(56,214,255,.28)"
+}

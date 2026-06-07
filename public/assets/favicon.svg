@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">It's No Secret magnifying-glass security favicon</title>
+  <desc id="desc">Original navy and teal magnifying glass with subtle circuit traces and a centered security keyhole.</desc>
+  <defs>
+    <linearGradient id="lensFill" x1="100" y1="88" x2="330" y2="330" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#123A59"/><stop offset="0.56" stop-color="#0B253C"/><stop offset="1" stop-color="#07111F"/>
+    </linearGradient>
+    <linearGradient id="tealStroke" x1="94" y1="68" x2="400" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78EAD8"/><stop offset="0.48" stop-color="#38D6FF"/><stop offset="1" stop-color="#1877F2"/>
+    </linearGradient>
+    <linearGradient id="handleFill" x1="314" y1="316" x2="454" y2="456" gradientUnits="userSpaceOnUse"><stop stop-color="#124C67"/><stop offset="1" stop-color="#082238"/></linearGradient>
+    <clipPath id="lensClip"><circle cx="216" cy="206" r="112"/></clipPath>
+  </defs>
+  <path d="M312 303 425 416" fill="none" stroke="#061625" stroke-width="76" stroke-linecap="round"/>
+  <path d="M312 303 425 416" fill="none" stroke="url(#handleFill)" stroke-width="56" stroke-linecap="round"/>
+  <circle cx="216" cy="206" r="152" fill="#061625"/>
+  <circle cx="216" cy="206" r="137" fill="url(#tealStroke)"/>
+  <circle cx="216" cy="206" r="119" fill="#F8FBFF"/>
+  <circle cx="216" cy="206" r="108" fill="url(#lensFill)"/>
+  <g clip-path="url(#lensClip)" stroke="#58DDEB" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.7">
+    <path d="M116 176h53l26-26h43"/><path d="M128 236h54l31 31h81"/><path d="M153 112v44"/><path d="M205 98v52"/><path d="M257 110v47"/><path d="M288 173h-47l-23 23h-82"/><path d="M288 218h-51"/>
+  </g>
+  <rect x="178" y="169" width="76" height="76" rx="15" fill="#0A1A2D" stroke="url(#tealStroke)" stroke-width="8"/>
+  <path d="M177 169v-11c0-22 17-39 39-39s39 17 39 39v11" fill="none" stroke="#9DF3E2" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="216" cy="201" r="13" fill="#F8FBFF"/>
+  <path d="M216 213v22" stroke="#F8FBFF" stroke-width="12" stroke-linecap="round"/>
+</svg>

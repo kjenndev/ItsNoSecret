@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="236" viewBox="0 0 680 236" role="img" aria-labelledby="title desc">
+  <title id="title">It's No Secret Computer Services magnifying-glass security logo</title>
+  <desc id="desc">Original professional wordmark with navy and teal magnifying-glass diagnostic security mark.</desc>
+  <defs>
+    <linearGradient id="lensFill" x1="45" y1="34" x2="152" y2="151" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#123A59"/>
+      <stop offset="1" stop-color="#07111F"/>
+    </linearGradient>
+    <linearGradient id="tealStroke" x1="35" y1="25" x2="200" y2="198" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78EAD8"/>
+      <stop offset="0.5" stop-color="#38D6FF"/>
+      <stop offset="1" stop-color="#1877F2"/>
+    </linearGradient>
+    <linearGradient id="handleFill" x1="148" y1="148" x2="224" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#124C67"/>
+      <stop offset="1" stop-color="#082238"/>
+    </linearGradient>
+    <clipPath id="lensClip"><circle cx="103" cy="98" r="54"/></clipPath>
+  </defs>
+  <g transform="translate(24 18)">
+    <path d="M148 145 202 199" fill="none" stroke="#061625" stroke-width="36" stroke-linecap="round"/>
+    <path d="M148 145 202 199" fill="none" stroke="url(#handleFill)" stroke-width="26" stroke-linecap="round"/>
+    <path d="M158 155 174 171" fill="none" stroke="#38D6FF" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="103" cy="98" r="74" fill="#061625"/>
+    <circle cx="103" cy="98" r="66" fill="url(#tealStroke)"/>
+    <circle cx="103" cy="98" r="58" fill="#F8FBFF" opacity=".96"/>
+    <circle cx="103" cy="98" r="52" fill="url(#lensFill)"/>
+    <g clip-path="url(#lensClip)" stroke="#58DDEB" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" opacity=".72">
+      <path d="M54 84h25l12-12h21"/><path d="M61 113h25l15 15h38"/><path d="M73 53v21"/><path d="M98 46v25"/><path d="M123 52v23"/><path d="M139 83h-23l-11 11H65"/><path d="M139 105h-25"/><path d="M82 142v-20"/><path d="M119 145v-22"/>
+      <circle cx="54" cy="84" r="3.4" fill="#0B253C"/><circle cx="73" cy="53" r="3.4" fill="#0B253C"/><circle cx="123" cy="52" r="3.4" fill="#0B253C"/><circle cx="142" cy="105" r="3.4" fill="#0B253C"/><circle cx="119" cy="145" r="3.4" fill="#0B253C"/>
+    </g>
+    <rect x="85" y="80" width="36" height="36" rx="7" fill="#0A1A2D" stroke="url(#tealStroke)" stroke-width="4"/>
+    <path d="M85 80v-6c0-10 8-18 18-18s18 8 18 18v6" fill="none" stroke="#9DF3E2" stroke-width="5.5" stroke-linecap="round" opacity=".9"/>
+    <circle cx="103" cy="96" r="6" fill="#F8FBFF"/>
+    <path d="M103 102v11" stroke="#F8FBFF" stroke-width="5.5" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(284 62)">
+    <text x="0" y="48" fill="#F8FBFF" font-family="IBM Plex Sans, Inter, system-ui, sans-serif" font-size="49" font-weight="700" letter-spacing="-.9">It’s No Secret</text>
+    <text x="1" y="94" fill="#B9C7D8" font-family="IBM Plex Sans, Inter, system-ui, sans-serif" font-size="27" font-weight="600" letter-spacing=".45">Computer Services</text>
+    <path d="M2 121h344" stroke="#20354F"/>
+    <path d="M2 121h112" stroke="#38D6FF" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+</svg>
