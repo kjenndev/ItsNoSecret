@@ -33,6 +33,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 import logoPrimary from './assets/brand/logo-primary.svg';
 import logoMark from './assets/brand/logo-mark.svg';
+import RequestConsultationModal from './components/RequestConsultationModal.jsx';
 import badgeSince from './assets/brand/badge-since-2003.svg';
 import badgeOwner from './assets/brand/badge-owner-operated.svg';
 import badgeLocal from './assets/brand/badge-local-sa.svg';
@@ -141,7 +142,7 @@ function SectionHeading({ eyebrow, title, body }) {
   );
 }
 
-function CtaButtons({ stacked = false }) {
+function CtaButtons({ stacked = false, onRequestConsultation }) {
   return (
     <Stack direction={{ xs: 'column', sm: stacked ? 'column' : 'row' }} spacing={1.5} sx={{ width: '100%' }}>
       <Button component={Link} href={phoneHref} variant="contained" startIcon={<PhoneInTalkIcon />} aria-label="Call Now">
@@ -150,7 +151,7 @@ function CtaButtons({ stacked = false }) {
       <Button component={Link} href="#contact" variant="outlined" endIcon={<ArrowForwardIcon />} aria-label="Schedule Service">
         Schedule Service
       </Button>
-      <Button component={Link} href="#contact" variant="text" color="secondary" endIcon={<ArrowForwardIcon />} aria-label="Request a Free Consultation">
+      <Button type="button" onClick={onRequestConsultation} variant="text" color="secondary" endIcon={<ArrowForwardIcon />} aria-label="Request a Free Consultation">
         Request a Free Consultation
       </Button>
     </Stack>
@@ -410,6 +411,9 @@ function TestimonialsCarousel() {
 }
 
 function LandingPage() {
+  const [consultationOpen, setConsultationOpen] = useState(false);
+  const openConsultation = () => setConsultationOpen(true);
+
   return (
     <>
       <AppBar
@@ -478,7 +482,7 @@ function LandingPage() {
                       <Chip key={item} icon={<CheckCircleOutlineIcon />} label={item} sx={{ bgcolor: 'rgba(46,230,166,.08)' }} />
                     ))}
                   </Stack>
-                  <CtaButtons />
+                  <CtaButtons onRequestConsultation={openConsultation} />
                 </Stack>
               </Grid>
               <Grid size={{ xs: 12, md: 5 }}>
@@ -769,7 +773,7 @@ function LandingPage() {
                             Call {phoneDisplay}
                           </Typography>
                           <Typography color="text.secondary">Finding What Others Miss.</Typography>
-                          <CtaButtons stacked />
+                          <CtaButtons stacked onRequestConsultation={openConsultation} />
                         </Stack>
                       </CardContent>
                     </PolishedCard>
@@ -791,6 +795,7 @@ function LandingPage() {
           </Stack>
         </Container>
       </Box>
+      <RequestConsultationModal open={consultationOpen} onClose={() => setConsultationOpen(false)} />
     </>
   );
 }

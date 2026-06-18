@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, AppBar, Typography, IconButton } from '@mui/material';
-import { Dashboard, People, ConfirmationNumber, ExitToApp, ManageAccounts } from '@mui/icons-material';
+import { ContactMail, Dashboard, People, ConfirmationNumber, ExitToApp, ManageAccounts } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import logoPrimary from '../assets/brand/logo-primary.svg';
 
@@ -14,6 +14,7 @@ const AdminLayout = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/admin' },
     { text: 'Customers', icon: <People />, path: '/admin/customers' },
+    { text: 'Leads', icon: <ContactMail />, path: '/admin/leads' },
     { text: 'Tickets', icon: <ConfirmationNumber />, path: '/admin/tickets' },
   ];
 
@@ -74,9 +75,11 @@ const AdminLayout = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary={item.text} 
-                    primaryTypographyProps={{ 
-                      fontWeight: location.pathname === item.path ? 600 : 400,
-                      color: location.pathname === item.path ? 'secondary.main' : 'inherit'
+                    slotProps={{
+                      primary: {
+                        fontWeight: location.pathname === item.path ? 600 : 400,
+                        color: location.pathname === item.path ? 'secondary.main' : 'inherit'
+                      }
                     }}
                   />
                 </ListItemButton>

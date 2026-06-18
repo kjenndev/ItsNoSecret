@@ -3,6 +3,7 @@ import cors from 'cors';
 import 'dotenv/config';
 import authRoutes from './routes/auth.ts';
 import crmRoutes from './routes/crm.ts';
+import leadRoutes from './routes/leads.ts';
 import userRoutes from './routes/users.ts';
 import portalRoutes from './routes/portal.ts';
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/leads', leadRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/portal', portalRoutes);

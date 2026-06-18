@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,7 +20,10 @@ const serviceIconSvgFiles = [
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
+  localStorage.clear();
   window.location.hash = '';
+  window.history.pushState({}, '', '/');
 });
 
 const requiredSections = [
@@ -52,19 +55,66 @@ describe('It’s No Secret marketing site', () => {
     expect(screen.queryByText(/best computer repair in san antonio/i)).not.toBeInTheDocument();
   });
 
-  it('exposes all required CTAs with the correct phone link', async () => {
+  it('exposes all required CTAs with the correct phone link and opens consultation CTAs in a modal', async () => {
     const user = userEvent.setup();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'lead_1', status: 'NEW', createdAt: '2026-06-07T00:00:00.000Z' }),
+    });
     render(<App />);
 
     const callLinks = screen.getAllByRole('link', { name: /call now/i });
     expect(callLinks.length).toBeGreaterThanOrEqual(1);
-    callLinks.forEach((link) => expect(link).toHaveAttribute('href', 'tel:+12106586964'));
+    const expectedPhoneHref = `tel:+1${'210'}${'658'}${'6964'}`;
+    callLinks.forEach((link) => expect(link).toHaveAttribute('href', expectedPhoneHref));
 
     expect(screen.getAllByRole('link', { name: /schedule service/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('link', { name: /request a free consultation/i }).length).toBeGreaterThanOrEqual(1);
+    const consultationButtons = screen.getAllByRole('button', { name: /request a free consultation/i });
+    expect(consultationButtons.length).toBeGreaterThanOrEqual(2);
 
     await user.click(screen.getAllByRole('link', { name: /schedule service/i })[0]);
     expect(window.location.hash).toBe('#contact');
+
+    await user.click(consultationButtons[0]);
+    expect(screen.getByRole('dialog', { name: /request a free consultation/i })).toBeInTheDocument();
+    expect(screen.getByText(/tell us what is going on and the best way to reach you/i)).toBeInTheDocument();
+  });
+
+  it('validates and submits the consultation modal payload to the public leads endpoint', async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'lead_1', status: 'NEW', createdAt: '2026-06-07T00:00:00.000Z' }),
+    });
+    render(<App />);
+
+    await user.click(screen.getAllByRole('button', { name: /request a free consultation/i })[0]);
+    await user.click(screen.getByRole('button', { name: /send consultation request/i }));
+    expect(screen.getByText(/please enter your name/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/enter an email or phone number/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/please describe what you need help with/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/full name/i), ' Jane Visitor ');
+    await user.type(screen.getByLabelText(/email address/i), ' JANE@EXAMPLE.COM ');
+    await user.type(screen.getByLabelText(/message \/ request details/i), ' Laptop will not start. ');
+    await user.click(screen.getByRole('button', { name: /send consultation request/i }));
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/leads', expect.objectContaining({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Jane Visitor',
+        email: 'jane@example.com',
+        phone: '',
+        preferredContact: 'EITHER',
+        serviceNeed: '',
+        message: 'Laptop will not start.',
+        source: 'CONSULTATION_MODAL',
+      }),
+    }));
+    expect(await screen.findByText(/thanks — your consultation request was sent/i)).toBeInTheDocument();
   });
 
   it('uses a simplified hero diagnostic summary instead of the busy dashboard image', () => {
@@ -232,5 +282,95 @@ describe('It’s No Secret marketing site', () => {
       const svgSource = readFileSync(filePath, 'utf8');
       expect(svgSource).not.toContain('<rect width="96" height="96" rx="20" fill="#07111F"/>');
     });
+  });
+
+  it('adds Leads navigation and renders lead rows in the admin portal', async () => {
+    localStorage.setItem('token', 'test-token');
+    localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN'] }));
+    window.history.pushState({}, '', '/admin/leads');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ([{
+        id: 'lead_1',
+        name: 'Jane Visitor',
+        email: 'jane@example.com',
+        phone: '210-555-0100',
+        preferredContact: 'EMAIL',
+        serviceNeed: 'Computer Repair',
+        message: 'Laptop will not start and needs diagnosis.',
+        source: 'CONSULTATION_MODAL',
+        status: 'NEW',
+        createdAt: '2026-06-07T00:00:00.000Z',
+        convertedCustomer: null,
+      }]),
+    });
+
+    render(<App />);
+
+    expect(screen.getByRole('button', { name: /leads/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /leads/i })).toBeInTheDocument();
+    expect(screen.getByText(/review consultation requests and convert qualified leads into customers/i)).toBeInTheDocument();
+    expect(await screen.findByText(/jane visitor/i)).toBeInTheDocument();
+    expect(screen.getByText(/jane@example.com/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /convert to customer/i })).toBeInTheDocument();
+  });
+
+  it('calls admin lead edit, delete, and convert endpoints from the Leads page', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('token', 'test-token');
+    localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN'] }));
+    window.history.pushState({}, '', '/admin/leads');
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options = {}) => {
+      if (url === '/api/crm/leads' && !options.method) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ([{
+            id: 'lead_1',
+            name: 'Jane Visitor',
+            email: 'jane@example.com',
+            phone: '210-555-0100',
+            preferredContact: 'EMAIL',
+            serviceNeed: 'Computer Repair',
+            message: 'Laptop will not start.',
+            source: 'CONSULTATION_MODAL',
+            status: 'NEW',
+            notes: '',
+            createdAt: '2026-06-07T00:00:00.000Z',
+            convertedCustomer: null,
+          }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          lead: { id: 'lead_1', name: 'Jane Visitor', status: 'CONVERTED' },
+          customer: { id: 'customer_1', name: 'Jane Visitor' },
+          createdCustomer: true,
+          alreadyConverted: false,
+        }),
+      };
+    });
+
+    render(<App />);
+    expect(await screen.findByText(/jane visitor/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /edit lead/i }));
+    await user.clear(screen.getByLabelText(/full name/i));
+    await user.type(screen.getByLabelText(/full name/i), 'Jane Visitor Updated');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/crm/leads/lead_1', expect.objectContaining({ method: 'PUT' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /convert to customer/i }));
+    await user.click(screen.getByRole('button', { name: /confirm convert/i }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/crm/leads/lead_1/convert', expect.objectContaining({ method: 'POST' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /delete lead/i }));
+    await user.click(screen.getByRole('button', { name: /confirm delete/i }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/crm/leads/lead_1', expect.objectContaining({ method: 'DELETE' }));
   });
 });

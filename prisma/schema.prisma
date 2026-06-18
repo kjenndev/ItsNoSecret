@@ -40,6 +40,30 @@ enum TicketType {
   OTHER
 }
 
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  CLOSED
+}
+
+enum LeadSource {
+  CONSULTATION_MODAL
+  ADMIN_CREATED
+  PHONE
+  EMAIL
+  REFERRAL
+  OTHER
+}
+
+enum PreferredContact {
+  EMAIL
+  PHONE
+  TEXT
+  EITHER
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -62,8 +86,31 @@ model Customer {
   userId    String?  @unique
   user      User?    @relation(fields: [userId], references: [id])
   tickets   Ticket[]
+  leads     Lead[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Lead {
+  id                  String            @id @default(uuid())
+  name                String
+  email               String?
+  phone               String?
+  preferredContact    PreferredContact? @default(EITHER)
+  serviceNeed         String?
+  message             String
+  source              LeadSource        @default(CONSULTATION_MODAL)
+  status              LeadStatus        @default(NEW)
+  notes               String?
+  convertedCustomerId String?
+  convertedCustomer   Customer?         @relation(fields: [convertedCustomerId], references: [id])
+  convertedAt         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@index([phone])
 }
 
 model Ticket {

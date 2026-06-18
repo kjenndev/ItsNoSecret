@@ -9,6 +9,7 @@ import AdminLayout from './admin/AdminLayout.jsx';
 import LoginPage from './admin/LoginPage.jsx';
 import AdminCustomers from './admin/AdminCustomers.jsx';
 import AdminCustomerDetails from './admin/AdminCustomerDetails.jsx';
+import AdminLeads from './admin/AdminLeads.jsx';
 import AdminTickets from './admin/AdminTickets.jsx';
 import AdminTicketDetails from './admin/AdminTicketDetails.jsx';
 import AdminUsers from './admin/AdminUsers.jsx';
@@ -66,6 +67,7 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="customers" element={<AdminCustomers />} />
             <Route path="customers/:id" element={<AdminCustomerDetails />} />
+            <Route path="leads" element={<AdminLeads />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="tickets/:id" element={<AdminTicketDetails />} />
             <Route path="users" element={<AdminUsers />} />
