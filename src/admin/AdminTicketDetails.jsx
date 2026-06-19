@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Paper, Typography, Box, CircularProgress, Alert, Button, 
+import {
+  Paper, Typography, Box, CircularProgress, Alert, Button,
   Divider, Chip, MenuItem, Select, FormControl, InputLabel, TextField,
   List, ListItem, ListItemText, Avatar, IconButton
 } from '@mui/material';
@@ -104,15 +104,15 @@ const AdminTicketDetails = () => {
           <IconButton onClick={() => navigate('/admin/tickets')} color="primary">
             <ArrowBack />
           </IconButton>
-          <PageHeading 
+          <PageHeading
             eyebrow={`Ticket #${ticket.id.split('-')[0]}`}
             title="Service Request Details"
             sx={{ mb: 0 }}
           />
         </Box>
-        <Button 
-          variant="contained" 
-          startIcon={<Save />} 
+        <Button
+          variant="contained"
+          startIcon={<Save />}
           onClick={handleUpdate}
           disabled={saving}
         >

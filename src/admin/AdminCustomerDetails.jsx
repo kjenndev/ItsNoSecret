@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Typography, Box, CircularProgress, Alert, Button, 
-  Divider, Chip, Table, TableBody, TableCell, TableContainer, 
+import {
+  Typography, Box, CircularProgress, Alert, Button,
+  Divider, Chip, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Avatar, IconButton
 } from '@mui/material';
 import { ArrowBack, Person } from '@mui/icons-material';
@@ -54,7 +54,7 @@ const AdminCustomerDetails = () => {
         <IconButton onClick={() => navigate('/admin/customers')} color="primary">
           <ArrowBack />
         </IconButton>
-        <PageHeading 
+        <PageHeading
           eyebrow="Customer Profile"
           title={customer.name}
           sx={{ mb: 0 }}
@@ -131,9 +131,9 @@ const AdminCustomerDetails = () => {
                 <TableBody>
                   {customer.tickets?.length > 0 ? (
                     customer.tickets.map((ticket) => (
-                      <TableRow 
-                        key={ticket.id} 
-                        hover 
+                      <TableRow
+                        key={ticket.id}
+                        hover
                         sx={{ cursor: 'pointer' }}
                         onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
                       >

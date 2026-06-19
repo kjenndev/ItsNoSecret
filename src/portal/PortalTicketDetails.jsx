@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Typography, Box, CircularProgress, Alert, Button, 
+import {
+  Typography, Box, CircularProgress, Alert, Button,
   Divider, Chip, List, ListItem, ListItemText, Avatar, TextField, IconButton
 } from '@mui/material';
 import { ArrowBack, Send } from '@mui/icons-material';
@@ -83,7 +83,7 @@ const PortalTicketDetails = () => {
           <IconButton onClick={() => navigate('/portal')} color="primary">
             <ArrowBack />
           </IconButton>
-          <PageHeading 
+          <PageHeading
             eyebrow={`Case Reference #${ticket.id.split('-')[0]}`}
             title="Service Request Details"
             sx={{ mb: 0 }}
@@ -166,7 +166,7 @@ const PortalTicketDetails = () => {
             <Typography variant="body1" gutterBottom sx={{ fontWeight: 500 }}>
               {ticket.assignedTo?.name || 'Pending Assignment'}
             </Typography>
-            
+
             <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', fontFamily: '"IBM Plex Mono"' }}>Ticket ID</Typography>
             <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'rgba(0,0,0,.2)', p: 0.5, borderRadius: 1 }}>
               {ticket.id}
