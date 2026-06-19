@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import '@fontsource/ibm-plex-sans/400.css';
 import '@fontsource/ibm-plex-sans/500.css';
 import '@fontsource/ibm-plex-sans/600.css';
@@ -148,7 +149,7 @@ function CtaButtons({ stacked = false, onRequestConsultation }) {
       <Button component={Link} href={phoneHref} variant="contained" startIcon={<PhoneInTalkIcon />} aria-label="Call Now">
         Call Now {phoneDisplay}
       </Button>
-      <Button component={Link} href="#contact" variant="outlined" endIcon={<ArrowForwardIcon />} aria-label="Schedule Service">
+      <Button component={RouterLink} to="/login" variant="outlined" endIcon={<ArrowForwardIcon />} aria-label="Schedule Service">
         Schedule Service
       </Button>
       <Button type="button" onClick={onRequestConsultation} variant="text" color="secondary" endIcon={<ArrowForwardIcon />} aria-label="Request a Free Consultation">
