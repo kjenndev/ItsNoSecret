@@ -284,6 +284,77 @@ describe('It’s No Secret marketing site', () => {
     });
   });
 
+  it('shows dashboard lead, customer, and open ticket counts on one row plus open tickets table', async () => {
+    localStorage.setItem('token', 'test-token');
+    localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN'] }));
+    window.history.pushState({}, '', '/admin');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const payloads = {
+        '/api/crm/leads': [
+          { id: 'lead_1', name: 'Fresh Lead', status: 'NEW' },
+          { id: 'lead_2', name: 'Qualified Lead', status: 'QUALIFIED' },
+          { id: 'lead_3', name: 'Converted Lead', status: 'CONVERTED' },
+        ],
+        '/api/crm/customers': [
+          { id: 'customer_1', name: 'Jane Customer' },
+          { id: 'customer_2', name: 'Bob Customer' },
+        ],
+        '/api/crm/tickets': [
+          {
+            id: 'ticket_open',
+            title: 'Computer will not boot',
+            description: 'Needs diagnosis.',
+            status: 'OPEN',
+            priority: 'HIGH',
+            type: 'PC_REPAIR',
+            customer: { name: 'Jane Customer' },
+            createdAt: '2026-06-07T00:00:00.000Z',
+          },
+          {
+            id: 'ticket_progress',
+            title: 'Slow laptop cleanup',
+            description: 'Malware removal in progress.',
+            status: 'IN_PROGRESS',
+            priority: 'MEDIUM',
+            type: 'MALWARE_REMOVAL',
+            customer: { name: 'Bob Customer' },
+            createdAt: '2026-06-08T00:00:00.000Z',
+          },
+          {
+            id: 'ticket_closed',
+            title: 'Closed ticket should not show',
+            description: 'Already complete.',
+            status: 'CLOSED',
+            priority: 'LOW',
+            type: 'OTHER',
+            customer: { name: 'Closed Customer' },
+            createdAt: '2026-06-09T00:00:00.000Z',
+          },
+        ],
+      };
+      return { ok: true, status: 200, json: async () => payloads[url] ?? [] };
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /staff dashboard/i })).toBeInTheDocument();
+    const countsRow = screen.getByTestId('dashboard-counts-row');
+    expect(countsRow).toHaveStyle({ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' });
+    const countCards = within(countsRow).getAllByTestId('dashboard-count-card');
+    expect(countCards).toHaveLength(3);
+    expect(within(countCards[0]).getByRole('heading', { name: /leads/i })).toBeInTheDocument();
+    expect(within(countCards[0]).getByText('3')).toBeInTheDocument();
+    expect(within(countCards[1]).getByRole('heading', { name: /total customers/i })).toBeInTheDocument();
+    expect(within(countCards[1]).getByText('2')).toBeInTheDocument();
+    expect(within(countCards[2]).getByRole('heading', { name: /open tickets/i })).toBeInTheDocument();
+    expect(within(countCards[2]).getByText('2')).toBeInTheDocument();
+
+    const openTicketsTable = screen.getByRole('table', { name: /open tickets/i });
+    expect(within(openTicketsTable).getByText(/computer will not boot/i)).toBeInTheDocument();
+    expect(within(openTicketsTable).getByText(/slow laptop cleanup/i)).toBeInTheDocument();
+    expect(within(openTicketsTable).queryByText(/closed ticket should not show/i)).not.toBeInTheDocument();
+  });
+
   it('adds Leads navigation and renders lead rows in the admin portal', async () => {
     localStorage.setItem('token', 'test-token');
     localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN'] }));
