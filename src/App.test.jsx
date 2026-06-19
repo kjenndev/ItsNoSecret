@@ -69,14 +69,20 @@ describe('It’s No Secret marketing site', () => {
     const expectedPhoneHref = `tel:+1${'210'}${'658'}${'6964'}`;
     callLinks.forEach((link) => expect(link).toHaveAttribute('href', expectedPhoneHref));
 
-    expect(screen.getAllByRole('link', { name: /schedule service/i }).length).toBeGreaterThanOrEqual(1);
+    const scheduleServiceLinks = screen.getAllByRole('link', { name: /schedule service/i });
+    expect(scheduleServiceLinks.length).toBeGreaterThanOrEqual(1);
+    scheduleServiceLinks.forEach((link) => expect(link).toHaveAttribute('href', '/login'));
     const consultationButtons = screen.getAllByRole('button', { name: /request a free consultation/i });
     expect(consultationButtons.length).toBeGreaterThanOrEqual(2);
 
-    await user.click(screen.getAllByRole('link', { name: /schedule service/i })[0]);
-    expect(window.location.hash).toBe('#contact');
+    await user.click(scheduleServiceLinks[0]);
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.getByRole('heading', { name: /portal login/i })).toBeInTheDocument();
 
-    await user.click(consultationButtons[0]);
+    cleanup();
+    window.history.pushState({}, '', '/');
+    render(<App />);
+    await user.click(screen.getAllByRole('button', { name: /request a free consultation/i })[0]);
     expect(screen.getByRole('dialog', { name: /request a free consultation/i })).toBeInTheDocument();
     expect(screen.getByText(/tell us what is going on and the best way to reach you/i)).toBeInTheDocument();
   });
