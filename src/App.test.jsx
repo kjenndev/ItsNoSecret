@@ -284,7 +284,7 @@ describe('It’s No Secret marketing site', () => {
     });
   });
 
-  it('sizes detail page left-column card stacks to 500px on desktop layouts', async () => {
+  it('sizes detail page left-column card stacks to 650px on desktop layouts', async () => {
     const detailCustomer = {
       id: 'customer_1',
       name: 'Jane Detail',
@@ -329,7 +329,7 @@ describe('It’s No Secret marketing site', () => {
       render(<App />);
       expect(await screen.findByText(readyText)).toBeInTheDocument();
       const leftColumn = screen.getByTestId('detail-left-column');
-      expect(leftColumn).toHaveStyle({ '--detail-left-column-width': '500px' });
+      expect(leftColumn).toHaveStyle({ '--detail-left-column-width': '650px' });
     };
 
     await assertLeftColumnWidth('/admin/customers/customer_1', /service history/i);

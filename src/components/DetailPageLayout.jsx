@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box } from '@mui/material';
 
-export const detailLeftColumnWidth = '500px';
+export const detailLeftColumnWidth = '650px';
 
 const DetailPageLayout = ({ left, right }) => (
   <Box
