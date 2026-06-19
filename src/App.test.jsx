@@ -290,6 +290,51 @@ describe('It’s No Secret marketing site', () => {
     });
   });
 
+  it('lets any signed-in user update their own account credentials', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('token', 'test-token');
+    localStorage.setItem('user', JSON.stringify({ id: 'user_1', name: 'Current User', email: 'current@example.com', roles: ['CLIENT'] }));
+    window.history.pushState({}, '', '/portal/account');
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options = {}) => {
+      if (url === '/api/users/me' && options.method === 'PUT') {
+        expect(JSON.parse(options.body)).toEqual({
+          name: 'Updated User',
+          email: 'updated@example.com',
+          currentPassword: 'old-password',
+          newPassword: 'new-password-123',
+          confirmNewPassword: 'new-password-123',
+        });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            token: 'new-token',
+            user: { id: 'user_1', name: 'Updated User', email: 'updated@example.com', roles: ['CLIENT'] },
+          }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => [] };
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /account settings/i })).toBeInTheDocument();
+    expect(screen.getByText(/update your login email, display name, or password/i)).toBeInTheDocument();
+    await user.clear(screen.getByLabelText(/full name/i));
+    await user.type(screen.getByLabelText(/full name/i), 'Updated User');
+    await user.clear(screen.getByLabelText(/email address/i));
+    await user.type(screen.getByLabelText(/email address/i), 'updated@example.com');
+    await user.type(screen.getByLabelText(/^current password/i), 'old-password');
+    await user.type(screen.getByLabelText(/^new password/i), 'new-password-123');
+    await user.type(screen.getByLabelText(/confirm new password/i), 'new-password-123');
+    await user.click(screen.getByRole('button', { name: /save credentials/i }));
+
+    expect(await screen.findByText(/credentials updated/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/users/me', expect.objectContaining({ method: 'PUT' }));
+    expect(localStorage.getItem('token')).toBe('new-token');
+    expect(JSON.parse(localStorage.getItem('user'))).toMatchObject({ name: 'Updated User', email: 'updated@example.com' });
+  });
+
   it('shows dashboard lead, customer, and open ticket counts on one row plus open tickets table', async () => {
     localStorage.setItem('token', 'test-token');
     localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN'] }));

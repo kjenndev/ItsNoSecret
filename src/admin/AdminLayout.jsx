@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, AppBar, Typography, IconButton } from '@mui/material';
-import { ContactMail, Dashboard, People, ConfirmationNumber, ExitToApp, ManageAccounts } from '@mui/icons-material';
+import { ContactMail, Dashboard, People, ConfirmationNumber, ExitToApp, ManageAccounts, AccountCircle } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import logoPrimary from '../assets/brand/logo-primary.svg';
 
@@ -16,6 +16,7 @@ const AdminLayout = () => {
     { text: 'Customers', icon: <People />, path: '/admin/customers' },
     { text: 'Leads', icon: <ContactMail />, path: '/admin/leads' },
     { text: 'Tickets', icon: <ConfirmationNumber />, path: '/admin/tickets' },
+    { text: 'Account', icon: <AccountCircle />, path: '/admin/account' },
   ];
 
   if (user.roles && user.roles.includes('ADMIN')) {
