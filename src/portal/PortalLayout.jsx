@@ -64,7 +64,7 @@ const PortalLayout = () => {
                   <ListItemIcon sx={{ color: location.pathname === item.path ? 'secondary.main' : 'inherit' }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText 
+                  <ListItemText
                     primary={item.text}
                     slotProps={{
                       primary: {
