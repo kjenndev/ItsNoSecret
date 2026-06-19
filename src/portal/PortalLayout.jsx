@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, AppBar, Typography, IconButton, Container } from '@mui/material';
-import { Dashboard, AddCircle, ExitToApp } from '@mui/icons-material';
+import { Dashboard, AddCircle, ExitToApp, AccountCircle } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import logoPrimary from '../assets/brand/logo-primary.svg';
 
@@ -14,6 +14,7 @@ const PortalLayout = () => {
   const menuItems = [
     { text: 'My Tickets', icon: <Dashboard />, path: '/portal' },
     { text: 'Submit Ticket', icon: <AddCircle />, path: '/portal/new-ticket' },
+    { text: 'Account', icon: <AccountCircle />, path: '/portal/account' },
   ];
 
   const handleLogout = () => {
