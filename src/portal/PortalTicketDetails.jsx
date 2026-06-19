@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Typography, Box, CircularProgress, Alert, Button, 
-  Grid, Divider, Chip, List, ListItem, ListItemText, Avatar, TextField, IconButton
+import {
+  Typography, Box, CircularProgress, Alert, Button,
+  Divider, Chip, List, ListItem, ListItemText, Avatar, TextField, IconButton
 } from '@mui/material';
 import { ArrowBack, Send } from '@mui/icons-material';
 import apiFetch from '../admin/api';
+import DetailPageLayout from '../components/DetailPageLayout.jsx';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const PortalTicketDetails = () => {
@@ -82,7 +83,7 @@ const PortalTicketDetails = () => {
           <IconButton onClick={() => navigate('/portal')} color="primary">
             <ArrowBack />
           </IconButton>
-          <PageHeading 
+          <PageHeading
             eyebrow={`Case Reference #${ticket.id.split('-')[0]}`}
             title="Service Request Details"
             sx={{ mb: 0 }}
@@ -91,8 +92,9 @@ const PortalTicketDetails = () => {
         <Chip label={ticket.status} color={getStatusColor(ticket.status)} sx={{ fontWeight: 600 }} />
       </Box>
 
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        <Grid item xs={12} md={10}>
+      <DetailPageLayout
+        left={(
+          <>
           <PolishedCard color="secondary" sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
               <Typography variant="h5" sx={{ fontWeight: 600 }}>{ticket.title}</Typography>
@@ -153,9 +155,10 @@ const PortalTicketDetails = () => {
               </Button>
             </Box>
           </PolishedCard>
-        </Grid>
-
-        <Grid item xs={12} md={2}>
+          </>
+        )}
+        right={(
+          <>
           <PolishedCard sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Service Info</Typography>
             <Divider sx={{ my: 1.5 }} />
@@ -163,7 +166,7 @@ const PortalTicketDetails = () => {
             <Typography variant="body1" gutterBottom sx={{ fontWeight: 500 }}>
               {ticket.assignedTo?.name || 'Pending Assignment'}
             </Typography>
-            
+
             <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', fontFamily: '"IBM Plex Mono"' }}>Ticket ID</Typography>
             <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'rgba(0,0,0,.2)', p: 0.5, borderRadius: 1 }}>
               {ticket.id}
@@ -182,8 +185,9 @@ const PortalTicketDetails = () => {
               {new Date(ticket.updatedAt).toLocaleString()}
             </Typography>
           </PolishedCard>
-        </Grid>
-      </Grid>
+          </>
+        )}
+      />
     </Box>
   );
 };

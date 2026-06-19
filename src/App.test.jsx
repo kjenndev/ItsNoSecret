@@ -69,14 +69,20 @@ describe('It’s No Secret marketing site', () => {
     const expectedPhoneHref = `tel:+1${'210'}${'658'}${'6964'}`;
     callLinks.forEach((link) => expect(link).toHaveAttribute('href', expectedPhoneHref));
 
-    expect(screen.getAllByRole('link', { name: /schedule service/i }).length).toBeGreaterThanOrEqual(1);
+    const scheduleServiceLinks = screen.getAllByRole('link', { name: /schedule service/i });
+    expect(scheduleServiceLinks.length).toBeGreaterThanOrEqual(1);
+    scheduleServiceLinks.forEach((link) => expect(link).toHaveAttribute('href', '/login'));
     const consultationButtons = screen.getAllByRole('button', { name: /request a free consultation/i });
     expect(consultationButtons.length).toBeGreaterThanOrEqual(2);
 
-    await user.click(screen.getAllByRole('link', { name: /schedule service/i })[0]);
-    expect(window.location.hash).toBe('#contact');
+    await user.click(scheduleServiceLinks[0]);
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.getByRole('heading', { name: /portal login/i })).toBeInTheDocument();
 
-    await user.click(consultationButtons[0]);
+    cleanup();
+    window.history.pushState({}, '', '/');
+    render(<App />);
+    await user.click(screen.getAllByRole('button', { name: /request a free consultation/i })[0]);
     expect(screen.getByRole('dialog', { name: /request a free consultation/i })).toBeInTheDocument();
     expect(screen.getByText(/tell us what is going on and the best way to reach you/i)).toBeInTheDocument();
   });
@@ -353,6 +359,60 @@ describe('It’s No Secret marketing site', () => {
     expect(within(openTicketsTable).getByText(/computer will not boot/i)).toBeInTheDocument();
     expect(within(openTicketsTable).getByText(/slow laptop cleanup/i)).toBeInTheDocument();
     expect(within(openTicketsTable).queryByText(/closed ticket should not show/i)).not.toBeInTheDocument();
+  });
+
+
+  it('sizes detail page left-column card stacks to 650px on desktop layouts', async () => {
+    const detailCustomer = {
+      id: 'customer_1',
+      name: 'Jane Detail',
+      email: 'jane.detail@example.com',
+      phone: '210-555-0101',
+      address: '123 Main St',
+      user: null,
+      tickets: [],
+    };
+    const detailTicket = {
+      id: 'ticket_1',
+      title: 'Detail page layout check',
+      description: 'The left column should be wider and easier to read.',
+      status: 'OPEN',
+      priority: 'HIGH',
+      type: 'PC_REPAIR',
+      assignedToId: '',
+      assignedTo: null,
+      customer: detailCustomer,
+      comments: [],
+      createdAt: '2026-06-07T00:00:00.000Z',
+      updatedAt: '2026-06-07T01:00:00.000Z',
+    };
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (url === '/api/crm/customers/customer_1') {
+        return { ok: true, status: 200, json: async () => detailCustomer };
+      }
+      if (url === '/api/crm/tickets/ticket_1' || url === '/api/portal/tickets/ticket_1') {
+        return { ok: true, status: 200, json: async () => detailTicket };
+      }
+      if (url === '/api/crm/users') {
+        return { ok: true, status: 200, json: async () => [] };
+      }
+      return { ok: true, status: 200, json: async () => [] };
+    });
+
+    const assertLeftColumnWidth = async (route, readyText) => {
+      cleanup();
+      localStorage.setItem('token', 'test-token');
+      localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN', 'TECHNICIAN'] }));
+      window.history.pushState({}, '', route);
+      render(<App />);
+      expect(await screen.findByText(readyText)).toBeInTheDocument();
+      const leftColumn = screen.getByTestId('detail-left-column');
+      expect(leftColumn).toHaveStyle({ '--detail-left-column-width': '650px' });
+    };
+
+    await assertLeftColumnWidth('/admin/customers/customer_1', /service history/i);
+    await assertLeftColumnWidth('/admin/tickets/ticket_1', /classification/i);
+    await assertLeftColumnWidth('/portal/tickets/ticket_1', /service info/i);
   });
 
   it('adds Leads navigation and renders lead rows in the admin portal', async () => {

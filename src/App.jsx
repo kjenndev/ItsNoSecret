@@ -122,7 +122,7 @@ const AdminDashboard = () => {
 
   return (
     <Box>
-      <PageHeading 
+      <PageHeading
         eyebrow="Staff Overview"
         title="Staff Dashboard"
         body="Manage your team and service requests with ease."
@@ -196,7 +196,7 @@ function App() {
 
           {/* Unified Login Page */}
           <Route path="/login" element={<LoginPage />} />
-          
+
           <Route path="/admin" element={
             <ProtectedRoute>
               <AdminLayout />
