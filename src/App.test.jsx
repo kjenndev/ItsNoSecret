@@ -290,6 +290,59 @@ describe('It’s No Secret marketing site', () => {
     });
   });
 
+  it('sizes detail page left-column card stacks to 650px on desktop layouts', async () => {
+    const detailCustomer = {
+      id: 'customer_1',
+      name: 'Jane Detail',
+      email: 'jane.detail@example.com',
+      phone: '210-555-0101',
+      address: '123 Main St',
+      user: null,
+      tickets: [],
+    };
+    const detailTicket = {
+      id: 'ticket_1',
+      title: 'Detail page layout check',
+      description: 'The left column should be wider and easier to read.',
+      status: 'OPEN',
+      priority: 'HIGH',
+      type: 'PC_REPAIR',
+      assignedToId: '',
+      assignedTo: null,
+      customer: detailCustomer,
+      comments: [],
+      createdAt: '2026-06-07T00:00:00.000Z',
+      updatedAt: '2026-06-07T01:00:00.000Z',
+    };
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      if (url === '/api/crm/customers/customer_1') {
+        return { ok: true, status: 200, json: async () => detailCustomer };
+      }
+      if (url === '/api/crm/tickets/ticket_1' || url === '/api/portal/tickets/ticket_1') {
+        return { ok: true, status: 200, json: async () => detailTicket };
+      }
+      if (url === '/api/crm/users') {
+        return { ok: true, status: 200, json: async () => [] };
+      }
+      return { ok: true, status: 200, json: async () => [] };
+    });
+
+    const assertLeftColumnWidth = async (route, readyText) => {
+      cleanup();
+      localStorage.setItem('token', 'test-token');
+      localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN', 'TECHNICIAN'] }));
+      window.history.pushState({}, '', route);
+      render(<App />);
+      expect(await screen.findByText(readyText)).toBeInTheDocument();
+      const leftColumn = screen.getByTestId('detail-left-column');
+      expect(leftColumn).toHaveStyle({ '--detail-left-column-width': '650px' });
+    };
+
+    await assertLeftColumnWidth('/admin/customers/customer_1', /service history/i);
+    await assertLeftColumnWidth('/admin/tickets/ticket_1', /classification/i);
+    await assertLeftColumnWidth('/portal/tickets/ticket_1', /service info/i);
+  });
+
   it('adds Leads navigation and renders lead rows in the admin portal', async () => {
     localStorage.setItem('token', 'test-token');
     localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN'] }));

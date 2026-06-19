@@ -65,10 +65,14 @@ const PortalLayout = () => {
                     {item.icon}
                   </ListItemIcon>
                   <ListItemText 
-                    primary={item.text} 
-                    primaryTypographyProps={{ 
-                      fontWeight: location.pathname === item.path ? 600 : 400,
-                      color: location.pathname === item.path ? 'secondary.main' : 'inherit'
+                    primary={item.text}
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontWeight: location.pathname === item.path ? 600 : 400,
+                          color: location.pathname === item.path ? 'secondary.main' : 'inherit',
+                        },
+                      },
                     }}
                   />
                 </ListItemButton>
