@@ -32,6 +32,7 @@ import PortalDashboard from './portal/PortalDashboard.jsx';
 import PortalNewTicket from './portal/PortalNewTicket.jsx';
 import PortalTicketDetails from './portal/PortalTicketDetails.jsx';
 import ProtectedRoute from './admin/ProtectedRoute.jsx';
+import AccountSettings from './components/AccountSettings.jsx';
 import apiFetch from './admin/api';
 import { PageHeading, PolishedCard } from './components/Shared.jsx';
 
@@ -209,6 +210,7 @@ function App() {
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="tickets/:id" element={<AdminTicketDetails />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="account" element={<AccountSettings />} />
           </Route>
 
           {/* Client Portal Routes */}
@@ -220,6 +222,7 @@ function App() {
             <Route index element={<PortalDashboard />} />
             <Route path="new-ticket" element={<PortalNewTicket />} />
             <Route path="tickets/:id" element={<PortalTicketDetails />} />
+            <Route path="account" element={<AccountSettings />} />
           </Route>
 
           {/* Catch all */}
