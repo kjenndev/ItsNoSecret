@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Paper, Typography, Box, CircularProgress, Alert, Button, 
-  Grid, Divider, Chip, MenuItem, Select, FormControl, InputLabel, TextField,
+import {
+  Paper, Typography, Box, CircularProgress, Alert, Button,
+  Divider, Chip, MenuItem, Select, FormControl, InputLabel, TextField,
   List, ListItem, ListItemText, Avatar, IconButton
 } from '@mui/material';
 import { ArrowBack, Save, Send } from '@mui/icons-material';
 import apiFetch from './api';
+import DetailPageLayout from '../components/DetailPageLayout.jsx';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const AdminTicketDetails = () => {
@@ -103,15 +104,15 @@ const AdminTicketDetails = () => {
           <IconButton onClick={() => navigate('/admin/tickets')} color="primary">
             <ArrowBack />
           </IconButton>
-          <PageHeading 
+          <PageHeading
             eyebrow={`Ticket #${ticket.id.split('-')[0]}`}
             title="Service Request Details"
             sx={{ mb: 0 }}
           />
         </Box>
-        <Button 
-          variant="contained" 
-          startIcon={<Save />} 
+        <Button
+          variant="contained"
+          startIcon={<Save />}
           onClick={handleUpdate}
           disabled={saving}
         >
@@ -119,8 +120,9 @@ const AdminTicketDetails = () => {
         </Button>
       </Box>
 
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        <Grid item xs={12} md={10}>
+      <DetailPageLayout
+        left={(
+          <>
           <PolishedCard sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Issue Information</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
@@ -145,24 +147,24 @@ const AdminTicketDetails = () => {
           <PolishedCard sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Customer Details</Typography>
             <Divider sx={{ my: 1.5 }} />
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
+              <Box>
                 <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Name</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>{ticket.customer.name}</Typography>
-              </Grid>
-              <Grid item xs={6}>
+              </Box>
+              <Box>
                 <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Email</Typography>
                 <Typography variant="body1">{ticket.customer.email || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={6}>
+              </Box>
+              <Box>
                 <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Phone</Typography>
                 <Typography variant="body1">{ticket.customer.phone || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={6}>
+              </Box>
+              <Box>
                 <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Address</Typography>
                 <Typography variant="body1">{ticket.customer.address || 'N/A'}</Typography>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </PolishedCard>
 
           <PolishedCard sx={{ p: 3 }}>
@@ -211,9 +213,10 @@ const AdminTicketDetails = () => {
               </Button>
             </Box>
           </PolishedCard>
-        </Grid>
-
-        <Grid item xs={12} md={2}>
+          </>
+        )}
+        right={(
+          <>
           <PolishedCard sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Classification</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 2 }}>
@@ -292,8 +295,9 @@ const AdminTicketDetails = () => {
               {new Date(ticket.updatedAt).toLocaleString()}
             </Typography>
           </PolishedCard>
-        </Grid>
-      </Grid>
+          </>
+        )}
+      />
     </Box>
   );
 };
