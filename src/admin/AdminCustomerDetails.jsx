@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Typography, Box, CircularProgress, Alert, Button, 
-  Grid, Divider, Chip, Table, TableBody, TableCell, TableContainer, 
+  Divider, Chip, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Avatar, IconButton
 } from '@mui/material';
 import { ArrowBack, Person } from '@mui/icons-material';
 import apiFetch from './api';
+import DetailPageLayout from '../components/DetailPageLayout.jsx';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const AdminCustomerDetails = () => {
@@ -60,58 +61,59 @@ const AdminCustomerDetails = () => {
         />
       </Box>
 
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        <Grid item xs={12} md={10}>
-          <PolishedCard sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
-                <Person fontSize="large" />
-              </Avatar>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>{customer.name}</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>ID: {customer.id.split('-')[0]}</Typography>
-              </Box>
-            </Box>
-            <Divider sx={{ my: 2 }} />
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Email Address</Typography>
-                <Typography variant="body1">{customer.email || 'N/A'}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Phone Number</Typography>
-                <Typography variant="body1">{customer.phone || 'N/A'}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Service Address</Typography>
-                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{customer.address || 'N/A'}</Typography>
-              </Box>
-            </Box>
-          </PolishedCard>
-
-          <PolishedCard sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Linked Portal Account</Typography>
-            <Divider sx={{ my: 1.5 }} />
-            {customer.user ? (
-              <Box>
-                <Typography variant="body2" gutterBottom>
-                  <strong>User Email:</strong> {customer.user.email}
-                </Typography>
-                <Box sx={{ mt: 1, display: 'flex', gap: 0.5 }}>
-                  {customer.user.roles.map(role => (
-                    <Chip key={role} label={role} size="small" variant="outlined" color="secondary" sx={{ height: 18, fontSize: 10, fontFamily: '"IBM Plex Mono"' }} />
-                  ))}
+      <DetailPageLayout
+        left={(
+          <>
+            <PolishedCard sx={{ p: 3, mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
+                  <Person fontSize="large" />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>{customer.name}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>ID: {customer.id.split('-')[0]}</Typography>
                 </Box>
               </Box>
-            ) : (
-              <Typography color="text.secondary" variant="body2" sx={{ fontStyle: 'italic' }}>
-                This customer does not have a portal login yet.
-              </Typography>
-            )}
-          </PolishedCard>
-        </Grid>
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Email Address</Typography>
+                  <Typography variant="body1">{customer.email || 'N/A'}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Phone Number</Typography>
+                  <Typography variant="body1">{customer.phone || 'N/A'}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"IBM Plex Mono"' }}>Service Address</Typography>
+                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{customer.address || 'N/A'}</Typography>
+                </Box>
+              </Box>
+            </PolishedCard>
 
-        <Grid item xs={12} md={2}>
+            <PolishedCard sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Linked Portal Account</Typography>
+              <Divider sx={{ my: 1.5 }} />
+              {customer.user ? (
+                <Box>
+                  <Typography variant="body2" gutterBottom>
+                    <strong>User Email:</strong> {customer.user.email}
+                  </Typography>
+                  <Box sx={{ mt: 1, display: 'flex', gap: 0.5 }}>
+                    {customer.user.roles.map(role => (
+                      <Chip key={role} label={role} size="small" variant="outlined" color="secondary" sx={{ height: 18, fontSize: 10, fontFamily: '"IBM Plex Mono"' }} />
+                    ))}
+                  </Box>
+                </Box>
+              ) : (
+                <Typography color="text.secondary" variant="body2" sx={{ fontStyle: 'italic' }}>
+                  This customer does not have a portal login yet.
+                </Typography>
+              )}
+            </PolishedCard>
+          </>
+        )}
+        right={(
           <PolishedCard sx={{ p: 0 }}>
             <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>Service History</Typography>
@@ -158,8 +160,8 @@ const AdminCustomerDetails = () => {
               </Table>
             </TableContainer>
           </PolishedCard>
-        </Grid>
-      </Grid>
+        )}
+      />
     </Box>
   );
 };
