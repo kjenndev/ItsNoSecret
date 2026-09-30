@@ -52,12 +52,15 @@ npm install
 ```
 
 ### 3. Environment Configuration
-Create a `.env` file in the root directory:
-```env
-DATABASE_URL="postgresql://<user>:<password>@localhost:5432/its_no_secret"
-JWT_SECRET="your-super-secret-key"
-PORT=5000
+For a **new** local setup, copy `.env.example` to `.env` and fill in your database credentials. Do not overwrite an existing environment file. `.env` and `.env.*` overrides are ignored; only the empty/safe template belongs in Git. Production should inject credentials through a secret manager or an owner-readable external environment file, never a committed file. Never prefix server secrets with `VITE_` (Vite exposes those to browsers).
+
+Generate `JWT_SECRET` locally using a cryptographic random source:
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
+Store the output securely, not in source control or shared logs. The API refuses to start with a missing, short, low-diversity, or recognizable example/default secret. Signing and verification share one validated configuration. Use at least 32 random bytes (the command yields a 64-character hex value); validation rejects values shorter than 32 UTF-8 bytes or with fewer than 8 distinct characters, but cannot prove randomness. Prisma generation and frontend builds do not require JWT configuration.
+
+**Previously committed secrets remain exposed in Git history.** Removing `.env` from the index does not revoke credentials or erase old commits/clones. The credential owner must rotate any exposed database password and JWT signing secret in each affected environment, invalidate existing sessions/tokens, and replace any accounts still using old seed defaults. Rotation is an operational task, not performed by this code change. Coordinate any separately approved history cleanup with collaborators; rewriting history alone cannot make an exposed secret safe.
 
 ### 4. Database Initialization
 Run the Prisma migrations to set up your local database schema:
@@ -66,7 +69,11 @@ npx prisma migrate dev --name init
 ```
 
 ### 5. Seed the Database
-Populate the database with the default admin and sample data:
+**Optional: disposable development databases only.** Seeding adds sample tickets again on repeated runs; do not run it against a live database or as an automatic deployment step.
+
+Set `SEED_ADMIN_PASSWORD` and `SEED_TECH_PASSWORD` through your local environment/secret manager before creating the corresponding users. Use distinct, password-manager-generated values: at least 16 characters, at most 72 UTF-8 bytes (bcrypt limit), at least 10 distinct characters, no surrounding whitespace, defaults, or example/password placeholders. There are no built-in seed passwords. Both needed credentials are validated before user writes. Existing users are returned unchanged, without requiring seed passwords; even a concurrent create cannot reset their passwords (`update: {}`). Seeding is **not** a password rotation mechanism.
+
+After confirming the target is an authorized disposable database:
 ```bash
 npm run seed
 ```
@@ -91,7 +98,7 @@ When deploying to a production environment (e.g., Heroku, Render, AWS), ensure t
 
 ### Environment Variables (Required)
 - `DATABASE_URL`: Connection string for your production database.
-- `JWT_SECRET`: A long, random string used to sign authentication tokens.
+- `JWT_SECRET`: Required cryptographically random signing secret; see Environment Configuration above. Missing/unsafe values prevent API startup.
 - `NODE_ENV`: Should be set to `production`.
 - `PORT`: The port the Express server will listen on (defaulting to 5000).
 
