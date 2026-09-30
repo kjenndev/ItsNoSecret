@@ -10,10 +10,13 @@ import {
 } from '@mui/material';
 import { ArrowBack, Person } from '@mui/icons-material';
 import apiFetch from './api';
+import DeleteCustomerDialog from './DeleteCustomerDialog.jsx';
 import DetailPageLayout from '../components/DetailPageLayout.jsx';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const AdminCustomerDetails = () => {
+  const isAdmin = JSON.parse(localStorage.getItem('user') || '{}').roles?.includes('ADMIN') === true;
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const page = usePagination();
@@ -65,7 +68,7 @@ const AdminCustomerDetails = () => {
   return (
     <Box>
       {loading && <CircularProgress aria-label="Loading page" />}
-      <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <IconButton aria-label="Back" onClick={() => navigate('/admin/customers')} color="primary">
           <ArrowBack />
         </IconButton>
@@ -74,7 +77,9 @@ const AdminCustomerDetails = () => {
           title={customer.name}
           sx={{ mb: 0 }}
         />
+        {isAdmin && <Button color="error" variant="outlined" sx={{ ml: { sm: 'auto' } }} onClick={() => setDeleteTarget({ id: customer.id, name: customer.name })}>Delete customer</Button>}
       </Box>
+      {isAdmin && deleteTarget?.id === id && <DeleteCustomerDialog customer={deleteTarget} onDeleted={() => navigate('/admin/customers')} onClose={() => setDeleteTarget(null)} />}
 
       <DetailPageLayout
         left={(

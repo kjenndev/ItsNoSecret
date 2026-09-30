@@ -72,4 +72,4 @@ Backups contain credentials (including password hashes) and customer information
 
 ## Product boundaries
 
-Customer listing/creation and existing ticket/customer workflows are implemented, but full customer CRUD, customer archival, and archive/restore UI are **not currently supported**. Do not promise customer edit/delete/archive behavior or infer it from the earlier README wording. Implementing those features requires separate product approval and backend/frontend work.
+Customer listing, creation, editing, and admin-only permanent deletion are implemented. Deletion removes associated tickets/comments but retains leads and login accounts; see [customer deletion](customer-deletion.md). Customer archival and archive/restore UI are **not supported**. Permanent deletion has no in-app undo; recovery requires an approved backup restoration process.

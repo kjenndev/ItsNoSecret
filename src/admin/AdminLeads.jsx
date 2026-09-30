@@ -349,12 +349,12 @@ export default function AdminLeads() {
                           <Button component={RouterLink} to={`/admin/customers/${lead.convertedCustomer.id}`} size="small" color="secondary">
                             Customer: {lead.convertedCustomer.name}
                           </Button>
-                        ) : '—'}
+                        ) : lead.convertedAt && !lead.convertedCustomerId ? <Typography variant="body2" color="text.secondary">Customer deleted</Typography> : '—'}
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title="Convert to customer">
                           <span>
-                            <IconButton aria-label="Convert to customer" size="small" color="secondary" disabled={Boolean(lead.convertedCustomer)} onClick={() => setConfirmAction({ type: 'convert', lead })}>
+                            <IconButton aria-label="Convert to customer" size="small" color="secondary" disabled={Boolean(lead.convertedCustomer || lead.convertedCustomerId || lead.convertedAt)} onClick={() => setConfirmAction({ type: 'convert', lead })}>
                               <PersonAddAlt />
                             </IconButton>
                           </span>
