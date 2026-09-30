@@ -70,7 +70,7 @@ npm run db:migrate:deploy
 ```
 
 ### 5. Seed the Database
-**Optional: disposable development databases only.** Seeding adds sample tickets again on repeated runs; do not run it against a live database or as an automatic deployment step.
+**Optional: disposable development databases only.** Seeding sets up the admin and technician accounts only. It does not create sample customers, leads, or tickets, and it does not remove existing records. Do not run it against a live database or as an automatic deployment step.
 
 Set `SEED_ADMIN_PASSWORD` and `SEED_TECH_PASSWORD` through your local environment/secret manager before creating the corresponding users. Use distinct, password-manager-generated values: at least 16 characters, at most 72 UTF-8 bytes (bcrypt limit), at least 10 distinct characters, no surrounding whitespace, defaults, or example/password placeholders. There are no built-in seed passwords. Both needed credentials are validated before user writes. Existing users are returned unchanged, without requiring seed passwords; even a concurrent create cannot reset their passwords (`update: {}`). Seeding is **not** a password rotation mechanism.
 
@@ -124,7 +124,7 @@ Follow the [production operations runbook](docs/operations.md) for the release g
 - `npm run test:ops`: Runs isolated migration-guard tests without a database.
 - `npm start`: Starts the API through runtime `tsx`.
 - `npm run db:migrate:deploy`: Runs the guarded migration deployment path.
-- `npm run seed`: Executes the Prisma seed script.
+- `npm run seed`: Sets up admin and technician accounts only; no sample customers, leads, or tickets.
 - `npx prisma studio`: Opens a visual GUI to manage your database data.
 
 ## Lead notification email
