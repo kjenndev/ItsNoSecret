@@ -1,4 +1,5 @@
 import express from 'express';
+import {enqueueLeadEmail} from '../leadEmail.ts';
 import { prisma } from '../db.ts';
 import { authenticateToken, requireStaff } from '../middleware/auth.ts';
 import { validateLeadPayload, LEAD_SOURCES, LEAD_STATUSES } from '../leadValidation.ts';
@@ -96,9 +97,13 @@ router.post('/leads', async (req, res) => {
 
   try {
     if (result.data.status === 'CONVERTED') { res.status(400).json({error: 'Use the dedicated conversion endpoint'}); return; }
-    const lead = await prisma.lead.create({
+    const lead = await prisma.$transaction(async tx => {
+    const created = await tx.lead.create({
       data: { ...result.data, source: result.data.source || 'ADMIN_CREATED' },
       include: leadInclude
+    });
+    await enqueueLeadEmail(tx, created);
+    return created;
     });
     res.status(201).json(lead);
   } catch (error) {

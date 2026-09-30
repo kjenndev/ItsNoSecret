@@ -28,6 +28,7 @@ import AdminLeads from './admin/AdminLeads.jsx';
 import AdminTickets from './admin/AdminTickets.jsx';
 import AdminTicketDetails from './admin/AdminTicketDetails.jsx';
 import AdminUsers from './admin/AdminUsers.jsx';
+import AdminSettings from './admin/AdminSettings.jsx';
 import PortalLayout from './portal/PortalLayout.jsx';
 import PortalDashboard from './portal/PortalDashboard.jsx';
 import PortalNewTicket from './portal/PortalNewTicket.jsx';
@@ -188,6 +189,7 @@ function App() {
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="tickets/:id" element={<AdminTicketDetails />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="settings" element={<ProtectedRoute roles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
             <Route path="account" element={<AccountSettings />} />
           </Route>
 

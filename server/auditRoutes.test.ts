@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
 const db = vi.hoisted(() => {
   const model = () => Object.fromEntries(['findUnique','findFirst','findMany','count','create','update','delete'].map(k => [k, vi.fn()]));
-  return { user: model(), customer: model(), ticket: model(), comment: model(), lead: model(), $transaction: vi.fn(), $queryRaw: vi.fn() };
+  return { user: model(), customer: model(), ticket: model(), comment: model(), lead: model(), emailSettings: model(), $transaction: vi.fn(), $queryRaw: vi.fn() };
 });
 vi.mock('./db.ts', () => ({ prisma: db }));
 process.env.JWT_SECRET = randomBytes(32).toString('hex');
