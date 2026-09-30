@@ -1,4 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import useVisiblePolling from '../components/useVisiblePolling.js';
+import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Typography, Box, CircularProgress, Alert, Button,
@@ -12,6 +15,8 @@ import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 const PortalTicketDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const page = usePagination();
+  const { offset, readPage } = page;
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -20,9 +25,12 @@ const PortalTicketDetails = () => {
 
   const fetchTicket = useCallback(async () => {
     try {
-      const response = await apiFetch(`/api/portal/tickets/${id}`);
+      setError('');
+      const response = await apiFetch(`/api/portal/tickets/${id}?limit=50&offset=${offset}`);
       if (response.ok) {
-        setTicket(await response.json());
+        const data = await response.json();
+        setTicket(data);
+        readPage(response, data.comments?.length || 0);
       } else {
         setError('Ticket not found');
       }
@@ -31,14 +39,9 @@ const PortalTicketDetails = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, offset, readPage]);
 
-  useEffect(() => {
-    const init = async () => {
-      await fetchTicket();
-    };
-    init();
-  }, [fetchTicket]);
+  const refresh = useVisiblePolling(fetchTicket);
 
   const handleAddComment = async (e) => {
     e.preventDefault();
@@ -48,11 +51,11 @@ const PortalTicketDetails = () => {
     try {
       const response = await apiFetch(`/api/portal/tickets/${id}/comments`, {
         method: 'POST',
-        body: JSON.stringify({ text: commentText }),
+        body: JSON.stringify({ text: commentText, isInternal: false }),
       });
       if (response.ok) {
         setCommentText('');
-        fetchTicket();
+        await refresh(true);
       } else {
         alert('Failed to add comment');
       }
@@ -74,13 +77,14 @@ const PortalTicketDetails = () => {
   };
 
   if (loading) return <CircularProgress />;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <Alert severity="error" action={<Button onClick={refresh}>Refresh</Button>}>{error}</Alert>;
 
   return (
     <Box>
-      <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'space-between' }}>
+      <Button onClick={refresh} sx={{ mb: 2 }}>Refresh</Button>
+      <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/portal')} color="primary">
+          <IconButton aria-label="Back" onClick={() => navigate('/portal')} color="primary">
             <ArrowBack />
           </IconButton>
           <PageHeading
@@ -108,10 +112,11 @@ const PortalTicketDetails = () => {
 
           <PolishedCard color="secondary" sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Communication History</Typography>
+            <Typography variant="body2" color="text.secondary">Messages here are client-visible and shared with staff.</Typography>
             <Divider sx={{ mb: 2 }} />
             <List sx={{ mb: 3 }}>
               {ticket.comments?.length > 0 ? (
-                ticket.comments.map((comment) => {
+                ticket.comments.filter(comment => comment.isInternal === false).map((comment) => {
                   const isStaff = comment.author.roles.some(r => ['ADMIN', 'TECHNICIAN'].includes(r));
                   return (
                     <ListItem key={comment.id} alignItems="flex-start" sx={{ px: 0 }}>
@@ -142,8 +147,10 @@ const PortalTicketDetails = () => {
                 <Typography color="text.secondary" variant="body2" sx={{ fontStyle: 'italic' }}>No activity yet.</Typography>
               )}
             </List>
+            <Pagination {...page} loading={loading} />
             <Box component="form" onSubmit={handleAddComment} sx={{ display: 'flex', gap: 1 }}>
               <TextField
+                label="Message to staff"
                 placeholder="Ask a question or provide an update..."
                 fullWidth
                 size="small"

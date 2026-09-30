@@ -12,6 +12,7 @@ describe('account credential update validation', () => {
     });
 
     expect(result.success).toBe(true);
+    if (!result.success) throw new Error(result.error);
     expect(result.data).toEqual({
       name: 'Jane Admin',
       email: 'jane.admin@example.com',
@@ -42,4 +43,10 @@ describe('account credential update validation', () => {
       error: 'New passwords do not match',
     });
   });
+});
+
+it('rejects oversized credential fields and preserves password whitespace', () => {
+ expect(validateAccountCredentialsPayload({email: 'a@b.test', currentPassword: 'old', newPassword: 'x'.repeat(73), confirmNewPassword: 'x'.repeat(73)}).success).toBe(false);
+ expect(validateAccountCredentialsPayload({email: 'a@b.test', name: 'n'.repeat(201), currentPassword: 'old'}).success).toBe(false);
+ expect(validateAccountCredentialsPayload({email: 'a@b.test', currentPassword: ' old ', newPassword: ' new-password ', confirmNewPassword: ' new-password '})).toMatchObject({success: true, data: {currentPassword: ' old ', newPassword: ' new-password '}});
 });

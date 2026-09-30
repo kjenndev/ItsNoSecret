@@ -12,7 +12,7 @@ const DetailPageLayout = ({ left, right }) => (
       display: 'grid',
       gridTemplateColumns: {
         xs: '1fr',
-        lg: 'var(--detail-left-column-width) minmax(0, 1fr)',
+        xl: 'var(--detail-left-column-width) minmax(0, 1fr)',
       },
       gap: 3,
       alignItems: 'start',
@@ -23,9 +23,9 @@ const DetailPageLayout = ({ left, right }) => (
       sx={{
         width: {
           xs: '100%',
-          lg: 'var(--detail-left-column-width)',
+          xl: 'var(--detail-left-column-width)',
         },
-        maxWidth: '100%',
+        maxWidth: '100%', minWidth: 0,
       }}
     >
       {left}

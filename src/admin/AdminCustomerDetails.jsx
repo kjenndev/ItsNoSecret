@@ -1,3 +1,6 @@
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import { Link as RouterLink } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -13,27 +16,38 @@ import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 const AdminCustomerDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const page = usePagination();
+  const { offset, readPage } = page;
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const fetchCustomer = async () => {
+      if (!active) return;
+      setLoading(true);
+      setError('');
       try {
-        const response = await apiFetch(`/api/crm/customers/${id}`);
+        const response = await apiFetch(`/api/crm/customers/${id}?limit=50&offset=${offset}`);
+        if (!active) return;
         if (response.ok) {
-          setCustomer(await response.json());
+          const data = await response.json();
+          if (!active) return;
+          setCustomer(data);
+          readPage(response, data.tickets?.length || 0);
         } else {
           setError('Customer not found');
         }
       } catch {
-        setError('Connection error');
+        if (active) setError('Connection error');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
-    fetchCustomer();
-  }, [id]);
+    void Promise.resolve().then(fetchCustomer);
+    return () => { active = false; };
+  }, [id, offset, readPage]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -45,13 +59,14 @@ const AdminCustomerDetails = () => {
     }
   };
 
-  if (loading) return <CircularProgress />;
+  if (!customer || customer.id !== id) return error ? <Alert severity="error">{error}</Alert> : <CircularProgress />;
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box>
+      {loading && <CircularProgress aria-label="Loading page" />}
       <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <IconButton onClick={() => navigate('/admin/customers')} color="primary">
+        <IconButton aria-label="Back" onClick={() => navigate('/admin/customers')} color="primary">
           <ArrowBack />
         </IconButton>
         <PageHeading
@@ -135,10 +150,10 @@ const AdminCustomerDetails = () => {
                         key={ticket.id}
                         hover
                         sx={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
+
                       >
                         <TableCell>
-                          <Typography variant="body2" color="primary.light" sx={{ fontWeight: 500 }}>{ticket.title}</Typography>
+                          <Typography component={RouterLink} to={`/admin/tickets/${ticket.id}`} variant="body2" color="primary.light" sx={{ fontWeight: 500 }}>{ticket.title}</Typography>
                         </TableCell>
                         <TableCell>
                           <Chip label={ticket.status} size="small" color={getStatusColor(ticket.status)} sx={{ height: 20, fontSize: 10 }} />
@@ -159,6 +174,7 @@ const AdminCustomerDetails = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+            <Pagination {...page} loading={loading} />
           </PolishedCard>
         )}
       />

@@ -67,8 +67,8 @@ const PortalNewTicket = () => {
           />
 
           <FormControl fullWidth>
-            <InputLabel>Type of Service</InputLabel>
-            <Select
+            <InputLabel id="type-of-service-label">Type of Service</InputLabel>
+            <Select labelId="type-of-service-label"
               value={formData.type}
               label="Type of Service"
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}

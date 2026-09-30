@@ -23,11 +23,16 @@ const normalizeOptionalString = (value: unknown) => {
 };
 
 export const validateAccountCredentialsPayload = (payload: AccountCredentialsPayload): ValidationResult => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return {success: false, error: 'JSON object required'};
+  for (const [field, max] of [['name', 200], ['email', 254], ['currentPassword', 72], ['newPassword', 72], ['confirmNewPassword', 72]] as const) {
+    const value = payload[field];
+    if (value != null && (typeof value !== 'string' || (field.includes('Password') ? Buffer.byteLength(value, 'utf8') : value.length) > max)) return {success: false, error: `${field} is invalid or too long`};
+  }
   const name = normalizeOptionalString(payload.name);
   const email = normalizeOptionalString(payload.email).toLowerCase();
-  const currentPassword = normalizeOptionalString(payload.currentPassword);
-  const newPassword = normalizeOptionalString(payload.newPassword);
-  const confirmNewPassword = normalizeOptionalString(payload.confirmNewPassword);
+  const currentPassword = typeof payload.currentPassword === 'string' ? payload.currentPassword : '';
+  const newPassword = typeof payload.newPassword === 'string' ? payload.newPassword : '';
+  const confirmNewPassword = typeof payload.confirmNewPassword === 'string' ? payload.confirmNewPassword : '';
 
   if (!currentPassword) {
     return { success: false, error: 'Current password is required to update account credentials' };

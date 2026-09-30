@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import {
   ThemeProvider,
   CssBaseline,
@@ -36,7 +37,6 @@ import AccountSettings from './components/AccountSettings.jsx';
 import apiFetch from './admin/api';
 import { PageHeading, PolishedCard } from './components/Shared.jsx';
 
-const activeTicketStatuses = new Set(['OPEN', 'IN_PROGRESS']);
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -68,10 +68,7 @@ const DashboardCountCard = ({ color = 'primary', title, value, caption }) => (
 );
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-  const [leads, setLeads] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [tickets, setTickets] = useState([]);
+  const [summary, setSummary] = useState({ leadCount: 0, customerCount: 0, openTicketCount: 0, recentOpenTickets: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -79,27 +76,10 @@ const AdminDashboard = () => {
     let active = true;
     const fetchDashboard = async () => {
       try {
-        const [leadsRes, customersRes, ticketsRes] = await Promise.all([
-          apiFetch('/api/crm/leads'),
-          apiFetch('/api/crm/customers'),
-          apiFetch('/api/crm/tickets'),
-        ]);
-
-        if (!leadsRes.ok || !customersRes.ok || !ticketsRes.ok) {
-          throw new Error('Failed to fetch dashboard data');
-        }
-
-        const [leadData, customerData, ticketData] = await Promise.all([
-          leadsRes.json(),
-          customersRes.json(),
-          ticketsRes.json(),
-        ]);
-
-        if (active) {
-          setLeads(leadData);
-          setCustomers(customerData);
-          setTickets(ticketData);
-        }
+        const response = await apiFetch('/api/crm/summary');
+        if (!response.ok) throw new Error('Failed to fetch dashboard data');
+        const data = await response.json();
+        if (active) setSummary(data);
       } catch {
         if (active) setError('Failed to load dashboard data');
       } finally {
@@ -113,10 +93,7 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  const openTickets = useMemo(
-    () => tickets.filter((ticket) => activeTicketStatuses.has(ticket.status)),
-    [tickets],
-  );
+  const openTickets = summary.recentOpenTickets;
 
   if (loading) return <CircularProgress aria-label="Loading dashboard" />;
   if (error) return <Alert severity="error">{error}</Alert>;
@@ -131,18 +108,18 @@ const AdminDashboard = () => {
 
       <Box
         data-testid="dashboard-counts-row"
-        style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
-        sx={{ mt: 4, display: 'grid', gap: 3, overflowX: 'auto', pb: 0.5 }}
+
+        sx={{ mt: 4, display: 'grid', gridTemplateColumns: '1fr', '@media (min-width:1200px)': { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }, gap: 3, pb: 0.5 }}
       >
-        <DashboardCountCard color="secondary" title="Leads" value={leads.length} caption="Consultation pipeline" />
-        <DashboardCountCard color="primary" title="Total Customers" value={customers.length} caption="Active in CRM" />
-        <DashboardCountCard color="secondary" title="Open Tickets" value={openTickets.length} caption="Needs attention" />
+        <DashboardCountCard color="secondary" title="Leads" value={summary.leadCount} caption="Consultation pipeline" />
+        <DashboardCountCard color="primary" title="Total Customers" value={summary.customerCount} caption="Active in CRM" />
+        <DashboardCountCard color="secondary" title="Open Tickets" value={summary.openTicketCount} caption="Needs attention" />
       </Box>
 
       <PolishedCard sx={{ mt: 4, p: 0 }}>
         <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>Open Tickets</Typography>
-          <Typography variant="body2" color="text.secondary">Tickets that are open or currently in progress.</Typography>
+          <Typography variant="body2" color="text.secondary">Most recent open or in-progress tickets.</Typography>
         </Box>
         <TableContainer>
           <Table aria-label="Open tickets">
@@ -158,9 +135,9 @@ const AdminDashboard = () => {
             <TableBody>
               {openTickets.length > 0 ? (
                 openTickets.map((ticket) => (
-                  <TableRow key={ticket.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/tickets/${ticket.id}`)}>
+                  <TableRow key={ticket.id} hover sx={{ cursor: 'pointer' }} >
                     <TableCell>
-                      <Typography variant="subtitle2" color="primary.light" sx={{ fontWeight: 600 }}>{ticket.title}</Typography>
+                      <Typography component={RouterLink} to={`/admin/tickets/${ticket.id}`} variant="subtitle2" color="primary.light" sx={{ fontWeight: 600 }}>{ticket.title}</Typography>
                       <Typography variant="caption" color="text.secondary">
                         {ticket.description?.length > 60 ? `${ticket.description.substring(0, 60)}...` : ticket.description}
                       </Typography>
@@ -181,6 +158,7 @@ const AdminDashboard = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Typography component={RouterLink} to="/admin/tickets" sx={{ display: 'block', p: 2 }}>View all tickets</Typography>
       </PolishedCard>
     </Box>
   );
@@ -215,7 +193,7 @@ function App() {
 
           {/* Client Portal Routes */}
           <Route path="/portal" element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={['CLIENT']}>
               <PortalLayout />
             </ProtectedRoute>
           }>

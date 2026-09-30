@@ -1,56 +1,67 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import PagedSelect from '../components/PagedSelect.jsx';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Typography, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Button, Box, CircularProgress, Alert, Chip,
   Dialog, DialogTitle, DialogContent, TextField, DialogActions,
-  MenuItem, Select, FormControl, InputLabel, IconButton, Checkbox, ListItemText
+  MenuItem, Select, FormControl, InputLabel, IconButton, Checkbox, ListItemText, FormControlLabel
 } from '@mui/material';
 import { Edit, Delete, PersonAdd } from '@mui/icons-material';
 import apiFetch from './api';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const AdminUsers = () => {
+  const requestGeneration = useRef(0);
+  const page = usePagination();
+  const { offset, readPage } = page;
   const [users, setUsers] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({ email: '', password: '', name: '', roles: ['TECHNICIAN'], customerId: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', name: '', roles: ['TECHNICIAN'], customerId: '', isActive: true });
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = JSON.parse(localStorage.getItem('user') || '{}').roles?.includes('ADMIN') === true;
 
   const fetchUsers = useCallback(async () => {
-    if (!currentUser.roles || !currentUser.roles.includes('ADMIN')) {
+    const generation = ++requestGeneration.current;
+    setLoading(true);
+    setError('');
+    if (!isAdmin) {
       setError('Access denied. Admin privileges required.');
       setLoading(false);
       return;
     }
 
     try {
-      const [usersRes, customersRes] = await Promise.all([
-        apiFetch('/api/users'),
-        apiFetch('/api/crm/customers')
-      ]);
-      
-      if (usersRes.ok && customersRes.ok) {
-        setUsers(await usersRes.json());
-        setCustomers(await customersRes.json());
+      const usersRes = await apiFetch(`/api/users?limit=50&offset=${offset}`);
+
+      if (generation !== requestGeneration.current) return;
+      if (usersRes.ok) {
+        const data = await usersRes.json();
+        if (generation !== requestGeneration.current) return;
+        setUsers(data);
+        readPage(usersRes, data.length);
       } else {
         setError('Failed to fetch management data');
       }
     } catch {
-      setError('Connection error');
+      if (generation === requestGeneration.current) setError('Connection error');
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
-  }, [currentUser.roles]);
+  }, [isAdmin, offset, readPage]);
 
   useEffect(() => {
+    let active = true;
     const init = async () => {
+      if (!active) return;
       await fetchUsers();
     };
-    init();
+    void Promise.resolve().then(init);
+    return () => { active = false; requestGeneration.current += 1; };
   }, [fetchUsers]);
 
   const handleOpen = (user = null) => {
@@ -61,11 +72,12 @@ const AdminUsers = () => {
         password: '', 
         name: user.name || '', 
         roles: user.roles || [],
-        customerId: user.customer?.id || ''
+        customerId: user.customer?.id || '',
+        isActive: user.isActive !== false
       });
     } else {
       setEditingUser(null);
-      setFormData({ email: '', password: '', name: '', roles: ['TECHNICIAN'], customerId: '' });
+      setFormData({ email: '', password: '', name: '', roles: ['TECHNICIAN'], customerId: '', isActive: true });
     }
     setOpen(true);
   };
@@ -104,7 +116,7 @@ const AdminUsers = () => {
     try {
       const response = await apiFetch(url, {
         method,
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, customerId: formData.roles.includes('CLIENT') ? formData.customerId || null : undefined }),
       });
 
       if (response.ok) {
@@ -120,7 +132,7 @@ const AdminUsers = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    if (!window.confirm('Deactivate this account? Its history will be preserved and sign-in will be blocked.')) return;
 
     try {
       const response = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
@@ -135,12 +147,13 @@ const AdminUsers = () => {
     }
   };
 
-  if (loading) return <CircularProgress />;
+
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'flex-start' }}>
+      {loading && <CircularProgress aria-label="Loading page" />}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
         <PageHeading 
           eyebrow="Internal"
           title="User Management"
@@ -167,7 +180,7 @@ const AdminUsers = () => {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id} hover>
-                  <TableCell>{user.name || 'N/A'}</TableCell>
+                  <TableCell>{user.name || 'N/A'} {user.isActive === false && <Chip label="Inactive" size="small" />}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -185,10 +198,10 @@ const AdminUsers = () => {
                   <TableCell>{user._count?.tickets || 0}</TableCell>
                   <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => handleOpen(user)} size="small" color="primary">
+                    <IconButton aria-label={`Edit user ${user.name || user.email}`} onClick={() => handleOpen(user)} size="small" color="primary">
                       <Edit />
                     </IconButton>
-                    <IconButton onClick={() => handleDelete(user.id)} size="small" color="error">
+                    <IconButton aria-label={`Deactivate user ${user.name || user.email}`} onClick={() => handleDelete(user.id)} size="small" color="error">
                       <Delete />
                     </IconButton>
                   </TableCell>
@@ -197,6 +210,7 @@ const AdminUsers = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Pagination {...page} loading={loading} />
       </PolishedCard>
 
       <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
@@ -222,9 +236,10 @@ const AdminUsers = () => {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
+            <FormControlLabel control={<Checkbox checked={formData.isActive} onChange={e => setFormData({ ...formData, isActive: e.target.checked })} />} label="Account active" />
             <FormControl fullWidth>
-              <InputLabel>Roles</InputLabel>
-              <Select
+              <InputLabel id="roles-label">Roles</InputLabel>
+              <Select labelId="roles-label"
                 multiple
                 value={formData.roles}
                 label="Roles"
@@ -253,19 +268,7 @@ const AdminUsers = () => {
             </FormControl>
 
             {formData.roles.includes('CLIENT') && (
-              <FormControl fullWidth>
-                <InputLabel>Link to CRM Customer</InputLabel>
-                <Select
-                  value={formData.customerId}
-                  label="Link to CRM Customer"
-                  onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                >
-                  <MenuItem value=""><em>None</em></MenuItem>
-                  {customers.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>{c.name} ({c.email || 'No Email'})</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <PagedSelect endpoint="/api/crm/customers" label="Link to CRM Customer" value={formData.customerId} selected={editingUser?.customer} onChange={e => setFormData({ ...formData, customerId: e.target.value })} />
             )}
           </Box>
         </DialogContent>
