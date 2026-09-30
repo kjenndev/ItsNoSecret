@@ -1,7 +1,7 @@
 import express from 'express';
 import {enqueueLeadEmail} from '../leadEmail.ts';
 import { prisma } from '../db.ts';
-import { authenticateToken, requireStaff } from '../middleware/auth.ts';
+import { authenticateToken, requireStaff, requireAdmin } from '../middleware/auth.ts';
 import { validateLeadPayload, LEAD_SOURCES, LEAD_STATUSES } from '../leadValidation.ts';
 
 import { validate, customerInput, ticketInput, commentInput } from '../validation.ts';
@@ -191,6 +191,12 @@ router.post('/leads/:id/convert', async (req, res) => {
         return { statusCode: 200, body: { lead, customer: lead.convertedCustomer, createdCustomer: false, alreadyConverted: true } };
       }
 
+      // A retained timestamp distinguishes historical conversion from legacy
+      // stranded records (no customer and no timestamp), which remain recoverable.
+      if (lead.convertedAt) {
+        return {statusCode: 409, body: {error: 'This lead was already converted; its customer has been deleted.'}};
+      }
+
       let customer = null;
       let createdCustomer = false;
       if (lead.email) {
@@ -299,6 +305,34 @@ router.put('/customers/:id', validate(body => customerInput(body)), async (req, 
     res.json(customer);
   } catch (error) {
     res.status(400).json({ error: 'Failed to update customer' });
+  }
+});
+
+router.delete('/customers/:id', requireAdmin, async (req, res) => {
+  const id = req.params.id as string;
+  try {
+    const deleted = await prisma.$transaction(async tx => {
+      // FOR UPDATE conflicts with FK key-share locks: ticket creation and customer
+      // linking either finish first or wait and fail after this deletion commits.
+      const customers = await tx.$queryRaw<{id: string}[]>`SELECT id FROM "Customer" WHERE id = ${id} FOR UPDATE`;
+      if (customers.length === 0) return false;
+      // Lock existing tickets before removing comments, excluding new comments.
+      await tx.$queryRaw`SELECT id FROM "Ticket" WHERE "customerId" = ${id} ORDER BY id FOR UPDATE`;
+      await tx.comment.deleteMany({where: {ticket: {customerId: id}}});
+      await tx.ticket.deleteMany({where: {customerId: id}});
+      await tx.lead.updateMany({where: {convertedCustomerId: id}, data: {convertedCustomerId: null}});
+      await tx.customer.delete({where: {id}});
+      return true;
+    });
+    if (!deleted) { res.status(404).json({error: 'Customer not found'}); return; }
+    res.status(204).send();
+  } catch (error: any) {
+    // Conversion locks leads before FK-checking customers; PostgreSQL may abort
+    // one transaction on a lock cycle. Never return success for partial cleanup.
+    if (error?.code === 'P2034') {
+      res.status(409).json({error: 'Customer deletion conflicted with another update; retry'}); return;
+    }
+    res.status(500).json({error: 'Failed to delete customer'});
   }
 });
 
