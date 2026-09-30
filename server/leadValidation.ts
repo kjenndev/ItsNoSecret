@@ -69,6 +69,12 @@ export function normalizeLeadPayload(payload: LeadPayload, options?: Partial<Lea
 export function validateLeadPayload(payload: LeadPayload, options: LeadValidationOptions):
   | { valid: true; data: NormalizedLeadPayload }
   | { valid: false; error: string } {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return {valid: false, error: 'JSON object required.'};
+  const limits: Record<string, number> = {name: 200, email: 254, phone: 50, preferredContact: 20, serviceNeed: 200, message: 10000, source: 30, status: 20, notes: 10000};
+  for (const [key, max] of Object.entries(limits)) {
+    const value = (payload as any)[key];
+    if (value != null && (typeof value !== 'string' || value.length > max)) return {valid: false, error: `${key} is invalid or too long.`};
+  }
   const data = normalizeLeadPayload(payload, options);
 
   if (!data.name) return { valid: false, error: 'Full name is required.' };

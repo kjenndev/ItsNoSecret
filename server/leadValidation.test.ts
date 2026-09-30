@@ -19,6 +19,7 @@ describe('lead input validation and normalization', () => {
     const result = validateLeadPayload(payload, { sourceDefault: 'CONSULTATION_MODAL' });
 
     expect(result.valid).toBe(true);
+    if (!result.valid) throw new Error(result.error);
     expect(result.data).toEqual({
       name: 'Jane Visitor',
       email: 'jane@example.com',
@@ -36,6 +37,7 @@ describe('lead input validation and normalization', () => {
     const result = validateLeadPayload({ name: 'Jane', message: 'Need help' }, { sourceDefault: 'CONSULTATION_MODAL' });
 
     expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('Expected validation failure');
     expect(result.error).toMatch(/email or phone/i);
   });
 
@@ -52,6 +54,7 @@ describe('lead input validation and normalization', () => {
     );
 
     expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('Expected validation failure');
     expect(result.error).toMatch(/valid email/i);
   });
 

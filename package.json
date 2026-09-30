@@ -12,7 +12,12 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "start": "tsx server/index.ts",
+    "typecheck": "tsc --project tsconfig.server.json --noEmit",
+    "test:ops": "node --test scripts/*.test.node.js",
+    "db:migrate:deploy": "node scripts/migrate-deploy.js",
+    "db:generate": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -36,6 +41,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.17.0",
+    "tsx": "^4.22.4",
     "vite": "^8.0.16"
   },
   "devDependencies": {
@@ -57,7 +63,7 @@
     "jsdom": "^29.1.1",
     "nodemon": "^3.1.14",
     "prisma": "7.10.0",
-    "tsx": "^4.22.4",
+    "typescript": "~5.9.3",
     "vitest": "^4.1.8"
   },
   "overrides": {
@@ -67,5 +73,8 @@
     "prisma": {
       "mysql2": "3.24.5"
     }
+  },
+  "engines": {
+    "node": "^22.22.1 || >=24.0.0"
   }
 }

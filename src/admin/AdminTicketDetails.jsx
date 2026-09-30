@@ -1,9 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import PagedSelect from '../components/PagedSelect.jsx';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Paper, Typography, Box, CircularProgress, Alert, Button,
   Divider, Chip, MenuItem, Select, FormControl, InputLabel, TextField,
-  List, ListItem, ListItemText, Avatar, IconButton
+  List, ListItem, ListItemText, Avatar, IconButton, FormControlLabel, Switch
 } from '@mui/material';
 import { ArrowBack, Save, Send } from '@mui/icons-material';
 import apiFetch from './api';
@@ -13,38 +16,50 @@ import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 const AdminTicketDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const requestGeneration = useRef(0);
+  const page = usePagination();
+  const { offset, readPage } = page;
   const [ticket, setTicket] = useState(null);
-  const [users, setUsers] = useState([]);
+  const [draft, setDraft] = useState(null);
+  const [isInternal, setIsInternal] = useState(true);
+  const [posting, setPosting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [commentText, setCommentText] = useState('');
 
   const fetchTicket = useCallback(async () => {
+    const generation = ++requestGeneration.current;
+    setLoading(true);
+    setError('');
     try {
-      const [ticketRes, usersRes] = await Promise.all([
-        apiFetch(`/api/crm/tickets/${id}`),
-        apiFetch('/api/crm/users')
-      ]);
+      const ticketRes = await apiFetch(`/api/crm/tickets/${id}?limit=50&offset=${offset}`);
 
-      if (ticketRes.ok && usersRes.ok) {
-        setTicket(await ticketRes.json());
-        setUsers(await usersRes.json());
+      if (generation !== requestGeneration.current) return;
+      if (ticketRes.ok) {
+        const data = await ticketRes.json();
+        if (generation !== requestGeneration.current) return;
+        setTicket(data);
+        readPage(ticketRes, data.comments?.length || 0);
+        setDraft(current => current?.id === data.id ? current : data);
       } else {
         setError('Data not found');
       }
     } catch {
-      setError('Connection error');
+      if (generation === requestGeneration.current) setError('Connection error');
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
-  }, [id]);
+  }, [id, offset, readPage]);
 
   useEffect(() => {
+    let active = true;
     const init = async () => {
+      if (!active) return;
       await fetchTicket();
     };
-    init();
+    void Promise.resolve().then(init);
+    return () => { active = false; requestGeneration.current += 1; };
   }, [fetchTicket]);
 
   const handleUpdate = async () => {
@@ -53,12 +68,12 @@ const AdminTicketDetails = () => {
       const response = await apiFetch(`/api/crm/tickets/${id}`, {
         method: 'PUT',
         body: JSON.stringify({
-          title: ticket.title,
-          description: ticket.description,
-          status: ticket.status,
-          priority: ticket.priority,
-          type: ticket.type,
-          assignedToId: ticket.assignedToId
+          title: draft.title,
+          description: draft.description,
+          status: draft.status,
+          priority: draft.priority,
+          type: draft.type,
+          assignedToId: draft.assignedToId || null
         }),
       });
       if (response.ok) {
@@ -76,32 +91,37 @@ const AdminTicketDetails = () => {
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || posting) return;
+    setPosting(true);
 
     try {
       const response = await apiFetch(`/api/crm/tickets/${id}/comments`, {
         method: 'POST',
-        body: JSON.stringify({ text: commentText }),
+        body: JSON.stringify({ text: commentText, isInternal }),
       });
       if (response.ok) {
         setCommentText('');
-        fetchTicket();
+        setIsInternal(true);
+        await fetchTicket();
       } else {
         alert('Failed to add comment');
       }
     } catch {
       alert('Connection error');
+    } finally {
+      setPosting(false);
     }
   };
 
-  if (loading) return <CircularProgress />;
+  if (!ticket || ticket.id !== id) return error ? <Alert severity="error">{error}</Alert> : <CircularProgress />;
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box>
-      <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'space-between' }}>
+      {loading && <CircularProgress aria-label="Loading page" />}
+      <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/admin/tickets')} color="primary">
+          <IconButton aria-label="Back" onClick={() => navigate('/admin/tickets')} color="primary">
             <ArrowBack />
           </IconButton>
           <PageHeading
@@ -130,16 +150,16 @@ const AdminTicketDetails = () => {
                 label="Ticket Title"
                 fullWidth
                 variant="outlined"
-                value={ticket.title}
-                onChange={(e) => setTicket({ ...ticket, title: e.target.value })}
+                value={draft.title}
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               />
               <TextField
                 label="Detailed Description"
                 fullWidth
                 multiline
                 rows={6}
-                value={ticket.description}
-                onChange={(e) => setTicket({ ...ticket, description: e.target.value })}
+                value={draft.description}
+                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
               />
             </Box>
           </PolishedCard>
@@ -168,7 +188,7 @@ const AdminTicketDetails = () => {
           </PolishedCard>
 
           <PolishedCard sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Technician Comments</Typography>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Ticket Discussion</Typography>
             <Divider sx={{ mb: 2 }} />
             <List sx={{ mb: 3 }}>
               {ticket.comments?.length > 0 ? (
@@ -181,7 +201,7 @@ const AdminTicketDetails = () => {
                       primary={
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="subtitle2" component="span" sx={{ fontWeight: 600 }}>
-                            {comment.author.name || comment.author.email}
+                            {comment.author.name || comment.author.email} <Chip size="small" label={comment.isInternal === false ? 'Client-visible' : 'Private / Internal'} />
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {new Date(comment.createdAt).toLocaleString()}
@@ -200,15 +220,18 @@ const AdminTicketDetails = () => {
                 <Typography color="text.secondary" variant="body2" sx={{ fontStyle: 'italic' }}>No comments yet.</Typography>
               )}
             </List>
+            <Pagination {...page} loading={loading} />
+            <FormControlLabel control={<Switch checked={isInternal} onChange={e => setIsInternal(e.target.checked)} />} label={isInternal ? "Private / Internal — staff only" : "Client-visible — shared with customer"} />
             <Box component="form" onSubmit={handleAddComment} sx={{ display: 'flex', gap: 1 }}>
               <TextField
+                label="Comment"
                 placeholder="Add a comment..."
                 fullWidth
                 size="small"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
               />
-              <Button type="submit" variant="outlined" color="secondary" endIcon={<Send />}>
+              <Button disabled={posting} type="submit" variant="outlined" color="secondary" endIcon={<Send />}>
                 Post
               </Button>
             </Box>
@@ -221,11 +244,11 @@ const AdminTicketDetails = () => {
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>Classification</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 2 }}>
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={ticket.status}
+                <InputLabel id="status-label">Status</InputLabel>
+                <Select labelId="status-label"
+                  value={draft.status}
                   label="Status"
-                  onChange={(e) => setTicket({ ...ticket, status: e.target.value })}
+                  onChange={(e) => setDraft({ ...draft, status: e.target.value })}
                 >
                   <MenuItem value="OPEN">Open</MenuItem>
                   <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
@@ -235,11 +258,11 @@ const AdminTicketDetails = () => {
               </FormControl>
 
               <FormControl fullWidth>
-                <InputLabel>Priority</InputLabel>
-                <Select
-                  value={ticket.priority}
+                <InputLabel id="priority-label">Priority</InputLabel>
+                <Select labelId="priority-label"
+                  value={draft.priority}
                   label="Priority"
-                  onChange={(e) => setTicket({ ...ticket, priority: e.target.value })}
+                  onChange={(e) => setDraft({ ...draft, priority: e.target.value })}
                 >
                   <MenuItem value="LOW">Low</MenuItem>
                   <MenuItem value="MEDIUM">Medium</MenuItem>
@@ -249,11 +272,11 @@ const AdminTicketDetails = () => {
               </FormControl>
 
               <FormControl fullWidth>
-                <InputLabel>Service Type</InputLabel>
-                <Select
-                  value={ticket.type}
+                <InputLabel id="service-type-label">Service Type</InputLabel>
+                <Select labelId="service-type-label"
+                  value={draft.type}
                   label="Service Type"
-                  onChange={(e) => setTicket({ ...ticket, type: e.target.value })}
+                  onChange={(e) => setDraft({ ...draft, type: e.target.value })}
                 >
                   <MenuItem value="PC_BUILD">PC Build</MenuItem>
                   <MenuItem value="PC_REPAIR">PC Repair</MenuItem>
@@ -265,21 +288,7 @@ const AdminTicketDetails = () => {
                 </Select>
               </FormControl>
 
-              <FormControl fullWidth>
-                <InputLabel>Assigned To</InputLabel>
-                <Select
-                  value={ticket.assignedToId || ''}
-                  label="Assigned To"
-                  onChange={(e) => setTicket({ ...ticket, assignedToId: e.target.value })}
-                >
-                  <MenuItem value=""><em>Unassigned</em></MenuItem>
-                  {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.name || user.email}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <PagedSelect endpoint="/api/crm/users" label="Assigned Technician" value={draft.assignedToId} selected={ticket.assignedTo} staffOnly onChange={e => setDraft({ ...draft, assignedToId: e.target.value || null })} />
             </Box>
           </PolishedCard>
 

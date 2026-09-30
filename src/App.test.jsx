@@ -383,14 +383,14 @@ describe('It’s No Secret marketing site', () => {
           },
         ],
       };
-      return { ok: true, status: 200, json: async () => payloads[url] ?? [] };
+      return { ok: true, status: 200, json: async () => url === '/api/crm/summary' ? { leadCount: 3, customerCount: 2, openTicketCount: 2, recentOpenTickets: payloads['/api/crm/tickets'].filter(t => t.status !== 'CLOSED') } : payloads[url] ?? [] };
     });
 
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: /staff dashboard/i })).toBeInTheDocument();
     const countsRow = screen.getByTestId('dashboard-counts-row');
-    expect(countsRow).toHaveStyle({ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' });
+    expect(countsRow).toHaveStyle({ gridTemplateColumns: '1fr' });
     const countCards = within(countsRow).getAllByTestId('dashboard-count-card');
     expect(countCards).toHaveLength(3);
     expect(within(countCards[0]).getByRole('heading', { name: /leads/i })).toBeInTheDocument();
@@ -432,10 +432,10 @@ describe('It’s No Secret marketing site', () => {
       updatedAt: '2026-06-07T01:00:00.000Z',
     };
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
-      if (url === '/api/crm/customers/customer_1') {
+      if (url.startsWith('/api/crm/customers/customer_1?')) {
         return { ok: true, status: 200, json: async () => detailCustomer };
       }
-      if (url === '/api/crm/tickets/ticket_1' || url === '/api/portal/tickets/ticket_1') {
+      if (url.startsWith('/api/crm/tickets/ticket_1?') || url.startsWith('/api/portal/tickets/ticket_1?')) {
         return { ok: true, status: 200, json: async () => detailTicket };
       }
       if (url === '/api/crm/users') {
@@ -447,7 +447,7 @@ describe('It’s No Secret marketing site', () => {
     const assertLeftColumnWidth = async (route, readyText) => {
       cleanup();
       localStorage.setItem('token', 'test-token');
-      localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN', 'TECHNICIAN'] }));
+      localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: route.startsWith('/portal') ? ['CLIENT'] : ['ADMIN', 'TECHNICIAN'] }));
       window.history.pushState({}, '', route);
       render(<App />);
       expect(await screen.findByText(readyText)).toBeInTheDocument();
@@ -484,7 +484,10 @@ describe('It’s No Secret marketing site', () => {
 
     render(<App />);
 
-    expect(screen.getByRole('button', { name: /leads/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /open navigation/i }));
+    expect(await screen.findByRole('link', { name: /^leads$/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: /^leads$/i }));
+    await waitFor(() => expect(screen.queryByRole('link', { name: /^leads$/i })).not.toBeInTheDocument());
     expect(await screen.findByRole('heading', { name: /leads/i })).toBeInTheDocument();
     expect(screen.getByText(/review consultation requests and convert qualified leads into customers/i)).toBeInTheDocument();
     expect(await screen.findByText(/jane visitor/i)).toBeInTheDocument();
@@ -498,7 +501,7 @@ describe('It’s No Secret marketing site', () => {
     localStorage.setItem('user', JSON.stringify({ name: 'Admin User', email: 'admin@example.com', roles: ['ADMIN'] }));
     window.history.pushState({}, '', '/admin/leads');
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options = {}) => {
-      if (url === '/api/crm/leads' && !options.method) {
+      if (url.startsWith('/api/crm/leads?') && !options.method) {
         return {
           ok: true,
           status: 200,

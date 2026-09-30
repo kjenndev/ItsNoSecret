@@ -1,16 +1,20 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Typography, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Button, Box, CircularProgress, Alert, 
   Dialog, DialogTitle, DialogContent, TextField, DialogActions, IconButton
 } from '@mui/material';
 import { Edit } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import apiFetch from './api';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const AdminCustomers = () => {
-  const navigate = useNavigate();
+  const requestGeneration = useRef(0);
+  const page = usePagination();
+  const { offset, readPage } = page;
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -19,26 +23,35 @@ const AdminCustomers = () => {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '' });
 
   const fetchCustomers = useCallback(async () => {
+    const generation = ++requestGeneration.current;
+    setLoading(true);
+    setError('');
     try {
-      const response = await apiFetch('/api/crm/customers');
+      const response = await apiFetch(`/api/crm/customers?limit=50&offset=${offset}`);
+      if (generation !== requestGeneration.current) return;
       if (response.ok) {
         const data = await response.json();
+        if (generation !== requestGeneration.current) return;
         setCustomers(data);
+        readPage(response, data.length);
       } else {
         setError('Failed to fetch customers');
       }
     } catch {
-      setError('Connection error');
+      if (generation === requestGeneration.current) setError('Connection error');
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
-  }, []);
+  }, [offset, readPage]);
 
   useEffect(() => {
+    let active = true;
     const init = async () => {
+      if (!active) return;
       await fetchCustomers();
     };
-    init();
+    void Promise.resolve().then(init);
+    return () => { active = false; requestGeneration.current += 1; };
   }, [fetchCustomers]);
 
   const handleOpen = (customer = null) => {
@@ -69,7 +82,7 @@ const AdminCustomers = () => {
     try {
       const response = await apiFetch(url, {
         method,
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, email: formData.email.trim().toLowerCase() || null }),
       });
 
       if (response.ok) {
@@ -84,12 +97,13 @@ const AdminCustomers = () => {
     }
   };
 
-  if (loading) return <CircularProgress />;
+
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'flex-start' }}>
+      {loading && <CircularProgress aria-label="Loading page" />}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
         <PageHeading 
           eyebrow="CRM"
           title="Customers"
@@ -118,7 +132,7 @@ const AdminCustomers = () => {
                     <Typography 
                       variant="subtitle2" 
                       sx={{ cursor: 'pointer', color: 'primary.light', '&:hover': { textDecoration: 'underline' } }}
-                      onClick={() => navigate(`/admin/customers/${customer.id}`)}
+                      component={RouterLink} to={`/admin/customers/${customer.id}`}
                     >
                       {customer.name}
                     </Typography>
@@ -128,7 +142,7 @@ const AdminCustomers = () => {
                   <TableCell>{customer._count?.tickets || 0}</TableCell>
                   <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => handleOpen(customer)} size="small" color="primary">
+                    <IconButton aria-label={`Edit customer ${customer.name}`} onClick={() => handleOpen(customer)} size="small" color="primary">
                       <Edit />
                     </IconButton>
                   </TableCell>
@@ -137,6 +151,7 @@ const AdminCustomers = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Pagination {...page} loading={loading} />
       </PolishedCard>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>

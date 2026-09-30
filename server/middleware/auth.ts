@@ -3,23 +3,29 @@ import { Request, Response, NextFunction } from 'express';
 
 import { JWT_SECRET } from '../authConfig.ts';
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+import { prisma } from '../db.ts';
 
-  if (!token) {
-    res.status(401).json({ error: 'Access token required' });
-    return;
-  }
-
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      res.status(403).json({ error: 'Invalid or expired token' });
-      return;
-    }
-    (req as any).user = user;
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) { res.status(401).json({ error: 'Access token required' }); return; }
+  let claims: any;
+  try {
+    claims = jwt.verify(header.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (typeof claims !== 'object' || typeof claims.userId !== 'string' || !Number.isInteger(claims.tokenVersion)) throw new Error('Invalid claims');
+  } catch { res.status(401).json({ error: 'Invalid or expired token' }); return; }
+  try {
+    const user = await prisma.user.findUnique({ where: { id: claims.userId } });
+    if (!user || !user.isActive || user.tokenVersion !== claims.tokenVersion) { res.status(401).json({ error: 'Session is no longer valid' }); return; }
+    (req as any).user = { userId: user.id, email: user.email, roles: user.roles, tokenVersion: user.tokenVersion };
     next();
-  });
+  } catch { res.status(503).json({ error: 'Authentication temporarily unavailable' }); }
+};
+
+export const requireStaff = (req: Request, res: Response, next: NextFunction) => {
+  if (!(req as any).user?.roles?.some((r: string) => ['ADMIN', 'TECHNICIAN'].includes(r))) {
+    res.status(403).json({ error: 'Staff privileges required' }); return;
+  }
+  next();
 };
 
 export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
