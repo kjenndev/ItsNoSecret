@@ -11,7 +11,7 @@ A professional, high-fidelity full-stack platform for managing computer service 
 
 ### Staff Admin Portal (`/admin`)
 - **CRM Dashboard**: Unified view of total customers and active service requests.
-- **Customer Management**: Customer listing/creation and existing ticket/customer workflows. Full customer CRUD and customer archival/archive-restore are not currently supported.
+- **Customer Management**: List, create, and edit customers. Administrators can permanently delete customers from the list or details page after confirmation; associated tickets/comments are deleted, while leads and login accounts are retained. Customer archival/archive-restore is not supported. See [customer deletion](docs/customer-deletion.md).
 - **Ticket Management**: A robust ticketing system with statuses (Open, In Progress, Resolved, Closed), priorities (Low to Urgent), and service types (PC Repair, Data Recovery, etc.).
 - **Technician Collaboration**: Ability to assign tickets to specific staff members and maintain internal discussion threads via comments.
 - **User Management**: Administrators can manage staff accounts, assign multiple roles, and link client users to CRM profiles.
