@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { Menu } from '@mui/icons-material';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, AppBar, Typography, IconButton } from '@mui/material';
-import { ContactMail, Dashboard, People, ConfirmationNumber, ExitToApp, ManageAccounts, AccountCircle } from '@mui/icons-material';
+import { ContactMail, Dashboard, People, ConfirmationNumber, ExitToApp, ManageAccounts, AccountCircle, Settings } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet, Link as RouterLink } from 'react-router-dom';
 import logoPrimary from '../assets/brand/logo-primary.svg';
 
@@ -63,11 +63,11 @@ const AdminLayout = () => {
         sx={{
           width: desktop ? drawerWidth : 0,
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box', overflow: 'hidden' },
         }}
       >
-        <Toolbar />
-        <Box sx={{ overflow: 'auto', py: 2 }}>
+        <Toolbar sx={{ flexShrink: 0 }} />
+        <Box data-testid="workspace-menu" sx={{ overflowY: 'auto', flex: '1 1 auto', minHeight: 0, py: 2 }}>
           <List>
             {menuItems.map((item) => (
               <ListItem 
@@ -97,6 +97,14 @@ const AdminLayout = () => {
             ))}
           </List>
         </Box>
+        {user.roles?.includes('ADMIN') && <List sx={{ mt: 'auto', flexShrink: 0, borderTop: '1px solid', borderColor: 'divider', pb: 'max(8px, env(safe-area-inset-bottom))' }}>
+          <ListItem disablePadding>
+            <ListItemButton component={RouterLink} to="/admin/settings" onClick={() => setMobileOpen(false)} selected={location.pathname === '/admin/settings'} aria-current={location.pathname === '/admin/settings' ? 'page' : undefined}>
+              <ListItemIcon sx={{ color: location.pathname === '/admin/settings' ? 'secondary.main' : 'inherit' }}><Settings /></ListItemIcon>
+              <ListItemText primary="App settings" />
+            </ListItemButton>
+          </ListItem>
+        </List>}
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0, width: '100%', p: { xs: 2, md: 4 }, minHeight: '100vh' }}>
         <Toolbar />

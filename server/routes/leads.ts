@@ -1,4 +1,5 @@
 import express from 'express';
+import {enqueueLeadEmail} from '../leadEmail.ts';
 import { prisma } from '../db.ts';
 import { validateLeadPayload } from '../leadValidation.ts';
 
@@ -15,7 +16,8 @@ router.post('/', rateLimit(), async (req, res) => {
   }
 
   try {
-    const lead = await prisma.lead.create({
+    const lead = await prisma.$transaction(async tx => {
+    const created = await tx.lead.create({
       data: {
         name: result.data.name,
         email: result.data.email,
@@ -26,13 +28,11 @@ router.post('/', rateLimit(), async (req, res) => {
         source: 'CONSULTATION_MODAL',
         status: 'NEW',
       },
-      select: {
-        id: true,
-        status: true,
-        createdAt: true,
-      },
     });
-    res.status(201).json(lead);
+    await enqueueLeadEmail(tx, created);
+    return created;
+    });
+    res.status(201).json({id:lead.id,status:lead.status,createdAt:lead.createdAt});
   } catch (error) {
     console.error('Failed to create public lead', error);
     res.status(500).json({ error: 'We could not send your request. Please try again or call (210) 658-6964.' });

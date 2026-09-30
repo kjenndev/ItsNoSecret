@@ -126,3 +126,7 @@ Follow the [production operations runbook](docs/operations.md) for the release g
 - `npm run db:migrate:deploy`: Runs the guarded migration deployment path.
 - `npm run seed`: Executes the Prisma seed script.
 - `npx prisma studio`: Opens a visual GUI to manage your database data.
+
+## Lead notification email
+
+Admins can configure Resend in **App settings → Email**, at the bottom of the staff navigation. Notifications for new public/staff leads are disabled until configured. See [Resend email setup and secret management](docs/resend-email.md).
