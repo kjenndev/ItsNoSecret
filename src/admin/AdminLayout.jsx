@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useMediaQuery, useTheme } from '@mui/material';
+import { Menu } from '@mui/icons-material';
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, AppBar, Typography, IconButton } from '@mui/material';
 import { ContactMail, Dashboard, People, ConfirmationNumber, ExitToApp, ManageAccounts, AccountCircle } from '@mui/icons-material';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet, Link as RouterLink } from 'react-router-dom';
 import logoPrimary from '../assets/brand/logo-primary.svg';
 
 const drawerWidth = 240;
 
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const desktop = useMediaQuery(useTheme().breakpoints.up('md'));
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -33,28 +37,31 @@ const AdminLayout = () => {
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar sx={{ gap: 2 }}>
-          <Box
+          {!desktop && <IconButton color="inherit" aria-label="Open navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Menu /></IconButton>}
+          <Box component={RouterLink} to="/admin" aria-label="Workspace home" sx={{ display: { xs: 'none', sm: 'block' } }}><Box
             component="img"
             src={logoPrimary}
             alt="It’s No Secret"
             sx={{ height: 42, cursor: 'pointer', display: { xs: 'none', sm: 'block' } }}
-            onClick={() => navigate('/admin')}
-          />
+          /></Box>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, ml: { sm: 2 } }}>
             Staff Portal
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mr: 2, display: { xs: 'none', md: 'block' } }}>
             Logged in as {user.name || user.email}
           </Typography>
-          <IconButton color="inherit" onClick={handleLogout}>
+          <IconButton aria-label="Sign out" color="inherit" onClick={handleLogout}>
             <ExitToApp />
           </IconButton>
         </Toolbar>
       </AppBar>
       <Drawer
-        variant="permanent"
+        variant={desktop ? "permanent" : "temporary"}
+        open={desktop || mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        slotProps={{ paper: { component: 'nav', 'aria-label': 'Workspace navigation' } }}
         sx={{
-          width: drawerWidth,
+          width: desktop ? drawerWidth : 0,
           flexShrink: 0,
           [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
         }}
@@ -68,7 +75,9 @@ const AdminLayout = () => {
                 disablePadding
               >
                 <ListItemButton
-                  onClick={() => navigate(item.path)}
+                  component={RouterLink}
+                  to={item.path}
+                  onClick={() => setMobileOpen(false)}
                   selected={location.pathname === item.path}
                 >
                   <ListItemIcon sx={{ color: location.pathname === item.path ? 'secondary.main' : 'inherit' }}>
@@ -89,7 +98,7 @@ const AdminLayout = () => {
           </List>
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 4, minHeight: '100vh' }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, width: '100%', p: { xs: 2, md: 4 }, minHeight: '100vh' }}>
         <Toolbar />
         <Outlet />
       </Box>

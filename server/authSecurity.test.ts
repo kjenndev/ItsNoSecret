@@ -15,7 +15,7 @@ describe('JWT configuration', () => {
   it('signs and verifies with the same configured key', async () => {
     vi.stubEnv('JWT_SECRET', randomBytes(32).toString('hex'));
     const { prisma } = await import('./db.ts');
-    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: 'test-user', email: 'test@example.test', name: 'Test', roles: ['ADMIN'], passwordHash: await bcrypt.hash('test-password', 4) } as never);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: 'test-user', email: 'test@example.test', name: 'Test', roles: ['ADMIN'], tokenVersion: 3, isActive: true, passwordHash: await bcrypt.hash('test-password', 4) } as never);
     const { default: routes } = await import('./routes/auth.ts');
     const { authenticateToken } = await import('./middleware/auth.ts');
     const app = express();
@@ -31,7 +31,7 @@ describe('JWT configuration', () => {
       expect(response.status).toBe(200);
       const { token } = await response.json();
       expect((await fetch(`${url}/protected`, { headers: { Authorization: `Bearer ${token}` } })).status).toBe(200);
-      expect((await fetch(`${url}/protected`, { headers: { Authorization: `Bearer ${token}broken` } })).status).toBe(403);
+      expect((await fetch(`${url}/protected`, { headers: { Authorization: `Bearer ${token}broken` } })).status).toBe(401);
     } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
   });
 });

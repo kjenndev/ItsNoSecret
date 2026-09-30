@@ -69,7 +69,9 @@ model User {
   email        String   @unique
   passwordHash String
   name         String?
-  roles        Role[]   @default([ADMIN])
+  roles        Role[]   @default([CLIENT])
+  tokenVersion Int      @default(0)
+  isActive     Boolean  @default(true)
   tickets      Ticket[] @relation("AssignedTickets")
   comments     Comment[]
   customer     Customer?
@@ -130,6 +132,7 @@ model Ticket {
 }
 
 model Comment {
+  isInternal Boolean @default(true)
   id        String   @id @default(uuid())
   text      String
   ticketId  String

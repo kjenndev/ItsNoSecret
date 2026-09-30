@@ -2,202 +2,94 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db.ts';
+import { claimCustomer, MutationError, lockAccountMutation, requireActiveAdmin } from '../accountMutation.ts';
+import { JWT_SECRET } from '../authConfig.ts';
 import { validateAccountCredentialsPayload } from '../accountCredentials.ts';
 import { authenticateToken, requireAdmin } from '../middleware/auth.ts';
+import { validate, userInput } from '../validation.ts';
 
+import { pagination, list, search } from '../pagination.ts';
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
-
-// All user routes require authentication. Self-service credentials are available to every signed-in user.
+const publicSelect = { id: true, email: true, name: true, roles: true, isActive: true, createdAt: true, customer: { select: { id: true, name: true, email: true } } } as const;
 router.use(authenticateToken);
-
 router.put('/me', async (req, res) => {
   const validation = validateAccountCredentialsPayload(req.body);
-  if (!validation.success) {
-    res.status(400).json({ error: validation.error });
-    return;
-  }
-
+  if (!validation.success) { res.status(400).json({ error: validation.error }); return; }
   try {
-    const currentUser = await prisma.user.findUnique({
-      where: { id: (req as any).user.userId },
-    });
-
-    if (!currentUser) {
-      res.status(404).json({ error: 'User not found' });
-      return;
+    const currentUser = await prisma.user.findUnique({where: {id: (req as any).user.userId}});
+    if (!currentUser || !await bcrypt.compare(validation.data.currentPassword, currentUser.passwordHash)) {
+      res.status(400).json({error: 'Current password is incorrect'}); return;
     }
-
-    const currentPasswordMatches = await bcrypt.compare(validation.data.currentPassword, currentUser.passwordHash);
-    if (!currentPasswordMatches) {
-      res.status(400).json({ error: 'Current password is incorrect' });
-      return;
-    }
-
-    const updateData: any = {
-      name: validation.data.name,
-      email: validation.data.email,
-    };
-
-    if (validation.data.newPassword) {
-      updateData.passwordHash = await bcrypt.hash(validation.data.newPassword, 10);
-    }
-
-    const user = await prisma.user.update({
-      where: { id: currentUser.id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        roles: true,
-      },
-    });
-
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, roles: user.roles },
-      JWT_SECRET,
-      { expiresIn: '8h' }
-    );
-
-    res.json({ token, user });
+    const data: any = { name: validation.data.name, email: validation.data.email, tokenVersion: {increment: 1} };
+    if (validation.data.newPassword) data.passwordHash = await bcrypt.hash(validation.data.newPassword, 10);
+    // Optimistic version check prevents concurrent credential edits from replacing each other.
+    const updated = await prisma.user.update({where: {id: currentUser.id, tokenVersion: (req as any).user.tokenVersion, isActive: true}, data, select: {...publicSelect, tokenVersion: true}});
+    const {tokenVersion, ...user} = updated;
+    const token = jwt.sign({userId: user.id, tokenVersion}, JWT_SECRET, {expiresIn: '8h'});
+    res.json({token, user});
   } catch (error: any) {
-    if (error?.code === 'P2002') {
-      res.status(400).json({ error: 'Email address is already in use' });
-      return;
-    }
-    console.error('Update own credentials error:', error);
-    res.status(500).json({ error: 'Failed to update account credentials' });
+    res.status(error?.code === 'P2025' ? 409 : 400).json({error: 'Could not update credentials; refresh your session or check the email address'});
   }
 });
-
-// Admin user management routes require admin role
-router.use(requireAdmin);
-
-// Get all users
-router.get('/', async (req, res) => {
-  try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        roles: true,
-        createdAt: true,
-        _count: {
-          select: { tickets: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch users' });
-  }
+router.use(requireAdmin, pagination);
+router.get('/', async (_req, res) => {
+  try { await list(res, prisma.user, {where: search(res.locals.page.q, ['name','email']), select: {...publicSelect, _count: {select: {tickets: true}}}, orderBy: [{createdAt: 'desc'}, {id: 'desc'}]}); }
+  catch { res.status(500).json({error: 'Failed to fetch users'}); }
 });
-
-// Create new user
-router.post('/', async (req, res) => {
-  const { email, password, name, roles, customerId } = req.body;
+router.post('/', validate(body => userInput(body, true)), async (req, res) => {
   try {
+    const {password, customerId, ...data} = req.body;
+    if (customerId && !data.roles.includes('CLIENT')) throw new MutationError(400, 'Only CLIENT accounts may link a customer');
     const passwordHash = await bcrypt.hash(password, 10);
-    
-    // Preparation for customer link/create
-    let customerData: any = undefined;
-    
-    if (roles?.includes('CLIENT')) {
-      if (customerId) {
-        customerData = { connect: { id: customerId } };
-      } else {
-        // Automatically create a customer profile if none linked
-        customerData = {
-          create: {
-            name: name || email.split('@')[0],
-            email: email,
-          }
-        };
-      }
-    }
-
-    const user = await prisma.user.create({
-      data: { 
-        email, 
-        passwordHash, 
-        name, 
-        roles: roles || ['TECHNICIAN'],
-        customer: customerData
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        roles: true,
-        createdAt: true
-      }
-    });
+    const user = await prisma.$transaction(async tx => {
+      await lockAccountMutation(tx, (req as any).user);
+      const customer = data.roles.includes('CLIENT') && !customerId ? {create: {name: data.name || data.email.split('@')[0], email: data.email}} : undefined;
+      const created = await tx.user.create({data: {...data, passwordHash, customer}, select: publicSelect});
+      if (customerId) await claimCustomer(tx, customerId, created.id);
+      return customerId ? tx.user.findUnique({where: {id: created.id}, select: publicSelect}) : created;
+    }, {isolationLevel: 'ReadCommitted'});
     res.status(201).json(user);
-  } catch (error) {
-    console.error('Create user error:', error);
-    res.status(400).json({ error: 'Failed to create user. Email might be in use.' });
-  }
+  } catch (error) { res.status(error instanceof MutationError ? error.status : 400).json({error: error instanceof MutationError ? error.message : 'Failed to create user; email or customer may already be linked'}); }
 });
-
-// Update user
-router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const { email, password, name, roles, customerId } = req.body;
-
+router.put('/:id', validate(body => userInput(body)), async (req, res) => {
   try {
-    const updateData: any = { 
-      email, 
-      name, 
-      roles,
-      // Handle customer linking
-      customer: roles?.includes('CLIENT') && customerId ? {
-        connect: { id: customerId }
-      } : {
-        disconnect: true // Disconnect if not a client or no customerId
+    const {password, customerId, ...data} = req.body;
+    if (password) data.passwordHash = await bcrypt.hash(password, 10);
+    const user = await prisma.$transaction(async tx => {
+      await lockAccountMutation(tx, (req as any).user);
+      const existing = await tx.user.findUnique({where: {id: req.params.id as string}, include: {customer: true}});
+      if (!existing) throw new MutationError(404, 'User not found');
+      const roles = data.roles ?? existing.roles;
+      if (req.params.id === (req as any).user.userId && (data.isActive === false || !roles.includes('ADMIN'))) {
+        throw new MutationError(400, 'You cannot deactivate or remove your own administrator role');
       }
-    };
-
-    if (password) {
-      updateData.passwordHash = await bcrypt.hash(password, 10);
-    }
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        roles: true
+      if (customerId && !roles.includes('CLIENT')) throw new MutationError(400, 'Only CLIENT accounts may link a customer');
+      // Omission is not a disconnect. Role removal preserves the historical profile.
+      if ('customerId' in req.body) {
+        if (customerId) await claimCustomer(tx, customerId, existing.id);
+        else data.customer = {disconnect: true};
       }
-    });
+      if (roles.includes('CLIENT') && !existing.customer && !('customerId' in req.body)) {
+        data.customer = {create: {name: data.name || existing.name || existing.email.split('@')[0], email: data.email || existing.email}};
+      }
+      data.tokenVersion = {increment: 1};
+      const updated = await tx.user.update({where: {id: req.params.id as string}, data, select: publicSelect});
+      await requireActiveAdmin(tx);
+      return updated;
+    }, {isolationLevel: 'ReadCommitted'});
     res.json(user);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update user' });
-  }
+  } catch (error) { res.status(error instanceof MutationError ? error.status : 400).json({error: error instanceof MutationError ? error.message : 'Failed to update user'}); }
 });
-
-// Delete user
+// Compatibility endpoint: deactivate rather than delete linked history.
 router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  // Prevent admin from deleting themselves
-  if (id === (req as any).user.userId) {
-    res.status(400).json({ error: 'You cannot delete your own account' });
-    return;
-  }
-
+  if (req.params.id === (req as any).user.userId) { res.status(400).json({error: 'You cannot deactivate your own account'}); return; }
   try {
-    await prisma.user.delete({
-      where: { id }
-    });
+    await prisma.$transaction(async tx => {
+      await lockAccountMutation(tx, (req as any).user);
+      await tx.user.update({where: {id: req.params.id as string}, data: {isActive: false, tokenVersion: {increment: 1}}});
+      await requireActiveAdmin(tx);
+    }, {isolationLevel: 'ReadCommitted'});
     res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to delete user' });
-  }
+  } catch (error) { res.status(error instanceof MutationError ? error.status : 400).json({error: error instanceof MutationError ? error.message : 'Failed to deactivate user'}); }
 });
-
 export default router;

@@ -2,10 +2,13 @@ import express from 'express';
 import { prisma } from '../db.ts';
 import { validateLeadPayload } from '../leadValidation.ts';
 
+import { rateLimit } from '../rateLimit.ts';
 const router = express.Router();
 
-router.post('/', async (req, res) => {
-  const result = validateLeadPayload(req.body, { sourceDefault: 'CONSULTATION_MODAL' });
+router.post('/', rateLimit(), async (req, res) => {
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const {name, email, phone, preferredContact, serviceNeed, message} = body;
+  const result = validateLeadPayload({name, email, phone, preferredContact, serviceNeed, message}, { sourceDefault: 'CONSULTATION_MODAL' });
   if (!result.valid) {
     res.status(400).json({ error: result.error });
     return;
@@ -14,7 +17,12 @@ router.post('/', async (req, res) => {
   try {
     const lead = await prisma.lead.create({
       data: {
-        ...result.data,
+        name: result.data.name,
+        email: result.data.email,
+        phone: result.data.phone,
+        preferredContact: result.data.preferredContact,
+        serviceNeed: result.data.serviceNeed,
+        message: result.data.message,
         source: 'CONSULTATION_MODAL',
         status: 'NEW',
       },

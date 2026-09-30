@@ -1,18 +1,22 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import PagedSelect from '../components/PagedSelect.jsx';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Typography, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Button, Box, CircularProgress, Alert, Chip,
   Dialog, DialogTitle, DialogContent, TextField, DialogActions,
   MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import apiFetch from './api';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const AdminTickets = () => {
-  const navigate = useNavigate();
+  const requestGeneration = useRef(0);
+  const page = usePagination();
+  const { offset, readPage } = page;
   const [tickets, setTickets] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
@@ -25,30 +29,36 @@ const AdminTickets = () => {
   });
 
   const fetchData = useCallback(async () => {
+    const generation = ++requestGeneration.current;
+    setLoading(true);
+    setError('');
     try {
-      const [ticketsRes, customersRes] = await Promise.all([
-        apiFetch('/api/crm/tickets'),
-        apiFetch('/api/crm/customers')
-      ]);
+      const ticketsRes = await apiFetch(`/api/crm/tickets?limit=50&offset=${offset}`);
 
-      if (ticketsRes.ok && customersRes.ok) {
-        setTickets(await ticketsRes.json());
-        setCustomers(await customersRes.json());
+      if (generation !== requestGeneration.current) return;
+      if (ticketsRes.ok) {
+        const data = await ticketsRes.json();
+        if (generation !== requestGeneration.current) return;
+        setTickets(data);
+        readPage(ticketsRes, data.length);
       } else {
         setError('Failed to fetch data');
       }
     } catch {
-      setError('Connection error');
+      if (generation === requestGeneration.current) setError('Connection error');
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
-  }, []);
+  }, [offset, readPage]);
 
   useEffect(() => {
+    let active = true;
     const init = async () => {
+      if (!active) return;
       await fetchData();
     };
-    init();
+    void Promise.resolve().then(init);
+    return () => { active = false; requestGeneration.current += 1; };
   }, [fetchData]);
 
   const handleAddTicket = async () => {
@@ -89,12 +99,13 @@ const AdminTickets = () => {
     }
   };
 
-  if (loading) return <CircularProgress />;
+
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'flex-start' }}>
+      {loading && <CircularProgress aria-label="Loading page" />}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
         <PageHeading 
           eyebrow="Support"
           title="Service Tickets"
@@ -123,7 +134,7 @@ const AdminTickets = () => {
                     <Typography 
                       variant="subtitle2" 
                       sx={{ cursor: 'pointer', color: 'primary.light', '&:hover': { textDecoration: 'underline' } }}
-                      onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
+                      component={RouterLink} to={`/admin/tickets/${ticket.id}`}
                     >
                       {ticket.title}
                     </Typography>
@@ -147,24 +158,14 @@ const AdminTickets = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Pagination {...page} loading={loading} />
       </PolishedCard>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create New Service Ticket</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <FormControl fullWidth>
-              <InputLabel>Customer</InputLabel>
-              <Select
-                value={newTicket.customerId}
-                label="Customer"
-                onChange={(e) => setNewTicket({ ...newTicket, customerId: e.target.value })}
-              >
-                {customers.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>{c.name} ({c.email})</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <PagedSelect endpoint="/api/crm/customers" label="Customer" value={newTicket.customerId} onChange={e => setNewTicket({ ...newTicket, customerId: e.target.value })} allowEmpty={false} />
             <TextField
               label="Ticket Title"
               fullWidth
@@ -172,8 +173,8 @@ const AdminTickets = () => {
               onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
             />
             <FormControl fullWidth>
-              <InputLabel>Service Type</InputLabel>
-              <Select
+              <InputLabel id="service-type-label">Service Type</InputLabel>
+              <Select labelId="service-type-label"
                 value={newTicket.type}
                 label="Service Type"
                 onChange={(e) => setNewTicket({ ...newTicket, type: e.target.value })}
@@ -196,8 +197,8 @@ const AdminTickets = () => {
               onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
             />
             <FormControl fullWidth>
-              <InputLabel>Priority</InputLabel>
-              <Select
+              <InputLabel id="priority-label">Priority</InputLabel>
+              <Select labelId="priority-label"
                 value={newTicket.priority}
                 label="Priority"
                 onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}

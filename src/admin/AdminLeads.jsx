@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -99,7 +101,7 @@ const preferredLabels = {
 function trimForm(form) {
   return {
     name: form.name.trim(),
-    email: form.email.trim().toLowerCase(),
+    email: form.email.trim().toLowerCase() || null,
     phone: form.phone.trim(),
     preferredContact: form.preferredContact,
     serviceNeed: form.serviceNeed.trim(),
@@ -121,6 +123,8 @@ function formatDate(value) {
 }
 
 export default function AdminLeads() {
+  const page = usePagination();
+  const { offset, setOffset, readPage } = page;
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -134,10 +138,12 @@ export default function AdminLeads() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [snackbar, setSnackbar] = useState(null);
 
+  const request = useRef(0);
   const fetchLeads = useCallback(async () => {
+    const version = ++request.current;
     setLoading(true);
     setError('');
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({limit: '50', offset: String(offset)});
     if (statusFilter !== 'ALL') params.set('status', statusFilter);
     if (search.trim()) params.set('q', search.trim());
     try {
@@ -146,17 +152,19 @@ export default function AdminLeads() {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to fetch leads');
       }
-      setLeads(await response.json());
+      const data = await response.json();
+      if (version === request.current) { setLeads(data); readPage(response, data.length); }
     } catch (fetchError) {
-      setError(fetchError.message || 'Connection error');
+      if (version === request.current) setError(fetchError.message || 'Connection error');
     } finally {
-      setLoading(false);
+      if (version === request.current) setLoading(false);
     }
-  }, [statusFilter, search]);
+  }, [statusFilter, search, offset, readPage]);
 
   useEffect(() => {
-    void Promise.resolve().then(() => fetchLeads());
-  }, [fetchLeads]);
+    const timer = setTimeout(() => fetchLeads(), search.trim() ? 300 : 0);
+    return () => { clearTimeout(timer); request.current += 1; };
+  }, [fetchLeads, search]);
 
   const handleOpen = (lead = null) => {
     setFormError('');
@@ -205,7 +213,8 @@ export default function AdminLeads() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Operation failed');
-      handleClose();
+      setOpen(false);
+      setEditingLead(null);
       setSnackbar({ severity: 'success', message: editingLead ? 'Lead updated.' : 'Lead created.' });
       await fetchLeads();
     } catch (submitError) {
@@ -246,7 +255,7 @@ export default function AdminLeads() {
         severity: 'success',
         message: data.alreadyConverted
           ? 'Lead was already converted.'
-          : `Lead converted to customer${data.customer?.name ? `: ${data.customer.name}` : ''}.`,
+          : `${data.createdCustomer ? 'Created new customer' : 'Linked to existing customer'}${data.customer?.name ? `: ${data.customer.name}` : ''}.`,
       });
       await fetchLeads();
     } catch (convertError) {
@@ -276,12 +285,12 @@ export default function AdminLeads() {
             label="Search leads"
             placeholder="Name, email, phone, or message"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => { setSearch(event.target.value); setOffset(0); }}
             fullWidth
           />
           <FormControl sx={{ minWidth: { xs: '100%', md: 200 } }}>
             <InputLabel id="lead-status-filter-label">Status</InputLabel>
-            <Select labelId="lead-status-filter-label" label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <Select labelId="lead-status-filter-label" label="Status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setOffset(0); }}>
               <MenuItem value="ALL">All statuses</MenuItem>
               {statusOptions.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
             </Select>
@@ -345,7 +354,7 @@ export default function AdminLeads() {
                       <TableCell align="right">
                         <Tooltip title="Convert to customer">
                           <span>
-                            <IconButton aria-label="Convert to customer" size="small" color="secondary" disabled={lead.status === 'CONVERTED'} onClick={() => setConfirmAction({ type: 'convert', lead })}>
+                            <IconButton aria-label="Convert to customer" size="small" color="secondary" disabled={Boolean(lead.convertedCustomer)} onClick={() => setConfirmAction({ type: 'convert', lead })}>
                               <PersonAddAlt />
                             </IconButton>
                           </span>
@@ -368,6 +377,7 @@ export default function AdminLeads() {
             </Table>
           </TableContainer>
         )}
+        <Pagination {...page} loading={loading} />
       </PolishedCard>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -406,7 +416,8 @@ export default function AdminLeads() {
                 <FormControl fullWidth>
                   <InputLabel id="lead-status-label">Status</InputLabel>
                   <Select labelId="lead-status-label" label="Status" value={formData.status} onChange={updateField('status')} disabled={editingLead?.status === 'CONVERTED'}>
-                    {statusOptions.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+                    {formData.status === 'CONVERTED' && <MenuItem value="CONVERTED">Converted (via conversion)</MenuItem>}
+                    {statusOptions.filter(([value]) => value !== 'CONVERTED').map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
                   </Select>
                 </FormControl>
               </Grid>

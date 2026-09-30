@@ -11,7 +11,7 @@ A professional, high-fidelity full-stack platform for managing computer service 
 
 ### Staff Admin Portal (`/admin`)
 - **CRM Dashboard**: Unified view of total customers and active service requests.
-- **Customer Management**: Full CRUD operations for the customer database, including detailed profile views and service history.
+- **Customer Management**: Customer listing/creation and existing ticket/customer workflows. Full customer CRUD and customer archival/archive-restore are not currently supported.
 - **Ticket Management**: A robust ticketing system with statuses (Open, In Progress, Resolved, Closed), priorities (Low to Urgent), and service types (PC Repair, Data Recovery, etc.).
 - **Technician Collaboration**: Ability to assign tickets to specific staff members and maintain internal discussion threads via comments.
 - **User Management**: Administrators can manage staff accounts, assign multiple roles, and link client users to CRM profiles.
@@ -37,7 +37,7 @@ A professional, high-fidelity full-stack platform for managing computer service 
 ## 💻 Local Development Setup
 
 ### Prerequisites
-- Node.js (v18 or higher)
+- Node.js 22.22.1+ (22.x) or 24+; use a supported LTS line
 - PostgreSQL (installed and running locally)
 
 ### 1. Clone the repository
@@ -48,7 +48,7 @@ cd its-no-secret-computer-services-site
 
 ### 2. Install dependencies
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. Environment Configuration
@@ -63,9 +63,10 @@ Store the output securely, not in source control or shared logs. The API refuses
 **Previously committed secrets remain exposed in Git history.** Removing `.env` from the index does not revoke credentials or erase old commits/clones. The credential owner must rotate any exposed database password and JWT signing secret in each affected environment, invalidate existing sessions/tokens, and replace any accounts still using old seed defaults. Rotation is an operational task, not performed by this code change. Coordinate any separately approved history cleanup with collaborators; rewriting history alone cannot make an exposed secret safe.
 
 ### 4. Database Initialization
-Run the Prisma migrations to set up your local database schema:
+After confirming the target database, generate the client and use the guarded migration command. A populated legacy single-role database requires an owner-supervised role-preserving upgrade; see [Operations](docs/operations.md). Never rewrite old migration checksums:
 ```bash
-npx prisma migrate dev --name init
+npm run db:generate
+npm run db:migrate:deploy
 ```
 
 ### 5. Seed the Database
@@ -102,17 +103,15 @@ When deploying to a production environment (e.g., Heroku, Render, AWS), ensure t
 - `NODE_ENV`: Should be set to `production`.
 - `PORT`: The port the Express server will listen on (defaulting to 5000).
 
-### Build & Migration Commands
-In your CI/CD pipeline, you should run:
-1. `npm install`
-2. `npx prisma generate` (Generates the TypeScript client)
-3. `npx prisma migrate deploy` (Applies migrations to the production DB)
-4. `npm run build` (Builds the Vite frontend)
+### Build, start, and operations
 
-### Deployment Architecture
-- The **Vite** frontend is built into the `dist/` folder and can be served as static files.
-- The **Express** backend (`server/index.ts`) must be running to handle API requests.
-- The project is configured with a **proxy** in `vite.config.js` for development; in production, you may need to configure your web server (Nginx/Apache) to route `/api` traffic to the Node.js process.
+Follow the [production operations runbook](docs/operations.md) for the release gates, guarded migration procedure, backup/restore rehearsal, proxy/CORS limitations, and readiness checks. No backups, alerts, or production supervisor are configured by that documentation.
+
+- `npm ci` then `npm run db:generate` prepares dependencies and the generated Prisma client.
+- `npm run typecheck`, `npm run test:ops`, `npm test`, `npm run lint`, and `npm run build` are separate release checks. The build only produces frontend assets.
+- `npm run db:migrate:deploy` inspects legacy role safety before invoking Prisma; migrations require owner approval and a verified backup.
+- `NODE_ENV=production npm start` runs the Express TypeScript backend through runtime `tsx`; it neither serves `dist/` nor generates/migrates/seeds the database.
+- Serve `dist/` separately and reverse-proxy same-origin `/api` to Express. Vite's development proxy is not shipped in `dist/`. Backend CORS is currently permissive and requires production review.
 
 ---
 
@@ -120,6 +119,10 @@ In your CI/CD pipeline, you should run:
 
 - `npm run dev`: Runs frontend and backend concurrently in development mode.
 - `npm run build`: Compiles the React frontend for production.
-- `npm run lint`: Runs ESLint for code quality checks.
+- `npm run lint`: Runs ESLint for JavaScript/JSX code quality checks.
+- `npm run typecheck`: Strict backend TypeScript no-emit gate (including backend tests and Prisma tooling).
+- `npm run test:ops`: Runs isolated migration-guard tests without a database.
+- `npm start`: Starts the API through runtime `tsx`.
+- `npm run db:migrate:deploy`: Runs the guarded migration deployment path.
 - `npm run seed`: Executes the Prisma seed script.
 - `npx prisma studio`: Opens a visual GUI to manage your database data.

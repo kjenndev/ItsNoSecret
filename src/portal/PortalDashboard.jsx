@@ -1,4 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import Pagination from '../components/Pagination.jsx';
+import { usePagination } from '../components/usePagination.js';
+import useVisiblePolling from '../components/useVisiblePolling.js';
+import { Link as RouterLink } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
 import { 
   Typography, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Button, Box, CircularProgress, Alert, Chip 
@@ -9,6 +13,8 @@ import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 import logoMark from '../assets/brand/logo-mark.svg';
 
 const PortalDashboard = () => {
+  const page = usePagination();
+  const { offset, readPage } = page;
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,9 +22,12 @@ const PortalDashboard = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const response = await apiFetch('/api/portal/me');
+      setError('');
+      const response = await apiFetch(`/api/portal/me?limit=50&offset=${offset}`);
       if (response.ok) {
-        setCustomer(await response.json());
+        const data = await response.json();
+        setCustomer(data);
+        readPage(response, data.tickets?.length || 0);
       } else {
         const data = await response.json();
         setError(data.error || 'Failed to load portal data');
@@ -28,14 +37,9 @@ const PortalDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [offset, readPage]);
 
-  useEffect(() => {
-    const init = async () => {
-      await fetchData();
-    };
-    init();
-  }, [fetchData]);
+  const refresh = useVisiblePolling(fetchData);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -48,13 +52,14 @@ const PortalDashboard = () => {
   };
 
   if (loading) return <CircularProgress />;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <Alert severity="error" action={<Button onClick={refresh}>Refresh</Button>}>{error}</Alert>;
 
-  const openTickets = customer.tickets?.filter(t => t.status !== 'CLOSED' && t.status !== 'RESOLVED').length || 0;
+  const openTickets = customer.openTicketCount ?? customer.tickets?.filter(t => t.status !== 'CLOSED' && t.status !== 'RESOLVED').length ?? 0;
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'flex-start' }}>
+      <Button onClick={refresh} sx={{ mb: 2 }}>Refresh</Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
         <PageHeading 
           eyebrow="Customer Portal"
           title={`Welcome, ${customer.name.split(' ')[0]}`}
@@ -65,10 +70,10 @@ const PortalDashboard = () => {
         </Button>
       </Box>
 
-      <Box sx={{ mb: 6, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 3 }}>
+      <Box sx={{ mb: 6, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 3 }}>
         <PolishedCard color="secondary" sx={{ p: 4, position: 'relative', overflow: 'hidden' }}>
           <Box component="img" src={logoMark} sx={{ position: 'absolute', right: -20, top: -20, width: 120, opacity: 0.05 }} />
-          <Typography variant="h6" color="secondary.light" sx={{ mb: 1, fontFamily: '"IBM Plex Mono"' }}>Active Requests</Typography>
+          <Typography variant="h6" color="secondary.light" sx={{ mb: 1, fontFamily: '"IBM Plex Mono"' }}>{customer.openTicketCount == null ? 'Active requests on this page' : 'Active Requests'}</Typography>
           <Typography variant="h2" sx={{ fontWeight: 600 }}>{openTickets}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>Currently in progress</Typography>
         </PolishedCard>
@@ -94,10 +99,10 @@ const PortalDashboard = () => {
                     key={ticket.id} 
                     hover 
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/portal/tickets/${ticket.id}`)}
+
                   >
                     <TableCell>
-                      <Typography variant="subtitle2" color="primary.light" sx={{ fontWeight: 600 }}>{ticket.title}</Typography>
+                      <Typography component={RouterLink} to={`/portal/tickets/${ticket.id}`} variant="subtitle2" color="primary.light" sx={{ fontWeight: 600 }}>{ticket.title}</Typography>
                     </TableCell>
                     <TableCell>
                       <Chip label={ticket.type.replace('_', ' ')} size="small" variant="outlined" sx={{ fontFamily: '"IBM Plex Mono"', fontSize: 10 }} />
@@ -119,6 +124,7 @@ const PortalDashboard = () => {
             </TableBody>
           </Table>
         </TableContainer>
+            <Pagination {...page} loading={loading} />
       </PolishedCard>
     </Box>
   );
