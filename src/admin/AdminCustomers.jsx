@@ -4,14 +4,17 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Typography, Table, TableBody, TableCell, TableContainer, 
   TableHead, TableRow, Button, Box, CircularProgress, Alert, 
-  Dialog, DialogTitle, DialogContent, TextField, DialogActions, IconButton
+  Dialog, DialogTitle, DialogContent, TextField, DialogActions, IconButton, Tooltip
 } from '@mui/material';
-import { Edit } from '@mui/icons-material';
+import { Edit, DeleteOutlined } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import apiFetch from './api';
+import DeleteCustomerDialog from './DeleteCustomerDialog.jsx';
 import { PageHeading, PolishedCard } from '../components/Shared.jsx';
 
 const AdminCustomers = () => {
+  const isAdmin = JSON.parse(localStorage.getItem('user') || '{}').roles?.includes('ADMIN') === true;
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const requestGeneration = useRef(0);
   const page = usePagination();
   const { offset, readPage } = page;
@@ -145,6 +148,7 @@ const AdminCustomers = () => {
                     <IconButton aria-label={`Edit customer ${customer.name}`} onClick={() => handleOpen(customer)} size="small" color="primary">
                       <Edit />
                     </IconButton>
+                    {isAdmin && <Tooltip title="Delete customer"><IconButton aria-label={`Delete customer ${customer.name}`} onClick={() => setDeleteTarget({ id: customer.id, name: customer.name })} size="small" color="error"><DeleteOutlined /></IconButton></Tooltip>}
                   </TableCell>
                 </TableRow>
               ))}
@@ -154,6 +158,7 @@ const AdminCustomers = () => {
         <Pagination {...page} loading={loading} />
       </PolishedCard>
 
+      {isAdmin && deleteTarget && <DeleteCustomerDialog customer={deleteTarget} onDeleted={() => { setDeleteTarget(null); void fetchCustomers(); }} onClose={() => setDeleteTarget(null)} />}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
         <DialogContent>
