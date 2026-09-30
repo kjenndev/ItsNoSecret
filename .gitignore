@@ -4,3 +4,7 @@ dist/
 .DS_Store
 
 /src/generated/prisma
+# Local credentials and environment overrides (template stays tracked)
+.env
+.env.*
+!.env.example

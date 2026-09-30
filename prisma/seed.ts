@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client.ts';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import bcrypt from 'bcryptjs';
+import { seedUsers } from './seedUsers.ts';
 
 const connectionString = process.env.DATABASE_URL;
 const pool = new pg.Pool({ connectionString });
@@ -12,33 +12,8 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('Seeding database...');
 
-  // Create Admin User
-  const adminPasswordHash = await bcrypt.hash('password123', 10);
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@itsnosecret.com' },
-    update: {},
-    create: {
-      email: 'admin@itsnosecret.com',
-      passwordHash: adminPasswordHash,
-      name: 'System Admin',
-      roles: ['ADMIN'],
-    },
-  });
-  console.log('Admin user created:', admin.email);
-
-  // Create Technician User
-  const techPasswordHash = await bcrypt.hash('tech123', 10);
-  const tech = await prisma.user.upsert({
-    where: { email: 'tech@itsnosecret.com' },
-    update: {},
-    create: {
-      email: 'tech@itsnosecret.com',
-      passwordHash: techPasswordHash,
-      name: 'Service Tech',
-      roles: ['TECHNICIAN'],
-    },
-  });
-  console.log('Technician user created:', tech.email);
+  const { admin, tech } = await seedUsers(prisma, process.env);
+  console.log('Seed users ready:', admin.email, tech.email);
 
   // Create Customers
   const customer1 = await prisma.customer.upsert({
