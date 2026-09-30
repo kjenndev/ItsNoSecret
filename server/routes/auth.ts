@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../db.ts';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
+import { JWT_SECRET } from '../authConfig.ts';
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
